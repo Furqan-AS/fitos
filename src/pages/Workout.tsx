@@ -112,6 +112,42 @@ export default function Workout() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      // Find or create today's session first so we can restore completed sets
+      let sid: string | null = null
+      const { data: existing } = await supabase
+        .from('workout_sessions').select('id').eq('user_id', user.id).eq('date', today()).maybeSingle()
+
+      if (existing?.id) {
+        sid = existing.id
+      } else {
+        const { data: created } = await supabase
+          .from('workout_sessions')
+          .insert({ user_id: user.id, date: today(), started_at: new Date().toISOString(), completed: false })
+          .select('id').single()
+        if (created) sid = created.id
+      }
+      setSessionId(sid)
+
+      // Fetch already-logged sets for this session so we can restore them
+      const todaysLogs: Record<string, { set_number: number; weight_kg: number; reps_completed: number; rpe: number }[]> = {}
+      if (sid) {
+        const { data: logs } = await supabase
+          .from('exercise_logs')
+          .select('exercise_id, set_number, weight_kg, reps_completed, rpe')
+          .eq('session_id', sid)
+        if (logs) {
+          for (const log of logs) {
+            if (!todaysLogs[log.exercise_id]) todaysLogs[log.exercise_id] = []
+            todaysLogs[log.exercise_id].push({
+              set_number: log.set_number,
+              weight_kg: log.weight_kg,
+              reps_completed: log.reps_completed,
+              rpe: log.rpe ?? 7,
+            })
+          }
+        }
+      }
+
       const loaded: SessionExercise[] = await Promise.all(
         programDay.exercises.map(async (tmpl) => {
           const exercise = getExerciseById(tmpl.exercise_id)
@@ -126,9 +162,9 @@ export default function Workout() {
           if (history && history.length > 0) {
             const bySession: Record<string, ExerciseLog[]> = {}
             for (const log of history as ExerciseLog[]) {
-              const sid = log.session_id
-              if (!bySession[sid]) bySession[sid] = []
-              bySession[sid].push(log)
+              const s = log.session_id
+              if (!bySession[s]) bySession[s] = []
+              bySession[s].push(log)
             }
             groupedHistory.push(...Object.values(bySession).slice(0, 3))
           }
@@ -138,25 +174,15 @@ export default function Workout() {
           const rec = getWeightRecommendation(groupedHistory, tmpl.sets, tmpl.target_reps_min, tmpl.exercise_type)
           const suggestedWeight = rec?.recommended_weight_kg ?? (tmpl.exercise_type === 'lower_compound' ? 40 : 20)
 
-          return { template: tmpl, exercise, suggestedWeight, lastWeight, progressDirection: rec?.direction, completedSets: [] }
+          const completedSets = todaysLogs[tmpl.exercise_id] ?? []
+          return { template: tmpl, exercise, suggestedWeight, lastWeight, progressDirection: rec?.direction, completedSets }
         })
       )
 
       setExercises(loaded)
-      setActiveIdx(0)
-
-      const { data: existing } = await supabase
-        .from('workout_sessions').select('id').eq('user_id', user.id).eq('date', today()).maybeSingle()
-
-      if (existing?.id) {
-        setSessionId(existing.id)
-      } else {
-        const { data: created } = await supabase
-          .from('workout_sessions')
-          .insert({ user_id: user.id, date: today(), started_at: new Date().toISOString(), completed: false })
-          .select('id').single()
-        if (created) setSessionId(created.id)
-      }
+      // Resume at the first exercise that still has sets remaining
+      const firstIncomplete = loaded.findIndex((e) => e.completedSets.length < e.template.sets)
+      setActiveIdx(firstIncomplete === -1 ? 0 : firstIncomplete)
     }
     init()
   }, [selectedDOW])
@@ -338,6 +364,7 @@ export default function Workout() {
                   suggestedWeight={ex.suggestedWeight}
                   lastWeight={ex.lastWeight}
                   progressDirection={ex.progressDirection}
+                  initialCompletedSets={ex.completedSets}
                   isActive={i === activeIdx}
                   onActivate={() => setActiveIdx(i)}
                   onSetsComplete={(sets) => handleSetsComplete(i, sets)}

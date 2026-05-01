@@ -46,6 +46,7 @@ interface ExerciseCardProps {
   suggestedWeight: number
   lastWeight?: number
   progressDirection?: 'increase' | 'maintain' | 'deload'
+  initialCompletedSets?: LoggedSet[]
   onSetsComplete: (sets: LoggedSet[]) => void
   onUncomplete?: () => void
   isActive: boolean
@@ -58,15 +59,16 @@ export default function ExerciseCard({
   suggestedWeight,
   lastWeight,
   progressDirection,
+  initialCompletedSets = [],
   onSetsComplete,
   onUncomplete,
   isActive,
   onActivate,
 }: ExerciseCardProps) {
-  const [loggedSets, setLoggedSets] = useState<LoggedSet[]>([])
+  const [loggedSets, setLoggedSets] = useState<LoggedSet[]>(initialCompletedSets)
   const [showTips, setShowTips] = useState(false)
   const [showRest, setShowRest] = useState(false)
-  const [activeSet, setActiveSet] = useState(1)
+  const [activeSet, setActiveSet] = useState(Math.min(initialCompletedSets.length + 1, template.sets))
   const [imgFailed, setImgFailed] = useState(false)
   const [globalWeight, setGlobalWeight] = useState<number | null>(null)
   const [applyWeightStr, setApplyWeightStr] = useState(String(suggestedWeight))
