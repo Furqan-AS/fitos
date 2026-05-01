@@ -30,6 +30,9 @@ const EXERCISE_IMGS: Record<string, string> = {
   'hip-thrust':            'Barbell_Hip_Thrust',
   'leg-extension':         'Leg_Extensions',
   'calf-raise-seated':     'Seated_Calf_Raise',
+  'face-pull':             'Face_Pull',
+  'overhead-tricep-ext':   'Overhead_Dumbbell_Triceps_Extension',
+  'incline-curl':          'Incline_Dumbbell_Curl',
 }
 
 interface LoggedSet {

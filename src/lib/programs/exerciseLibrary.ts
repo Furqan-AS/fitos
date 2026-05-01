@@ -230,6 +230,38 @@ export const exercises: Exercise[] = [
     tips: 'Seated targets soleus (deeper calf muscle). Different from standing. Do both.',
   },
 
+  // ── UPPER C ──────────────────────────────────────────────
+  {
+    id: 'face-pull',
+    name: 'Cable Face Pull',
+    primary_muscle: 'shoulders',
+    secondary_muscles: ['back'],
+    equipment: 'Cable Machine',
+    category: 'isolation',
+    instructions: 'Set cable to upper-chest height with rope attachment. Pull rope to face, separating hands at the end so thumbs point behind you. Pause. Return slowly.',
+    tips: '⭐ Best shoulder-health exercise in the program. Fixes internal rotation from too much pressing. Do these every Sunday without fail.',
+  },
+  {
+    id: 'overhead-tricep-ext',
+    name: 'Overhead Tricep Extension',
+    primary_muscle: 'triceps',
+    secondary_muscles: [],
+    equipment: 'Dumbbell or Cable',
+    category: 'isolation',
+    instructions: 'Hold one dumbbell overhead with both hands (or cable with rope overhead). Lower behind head by bending elbows. Extend fully overhead. Keep elbows close to ears.',
+    tips: 'Targets the long head of triceps — different from pushdown. Stretches the muscle under load for maximum growth stimulus.',
+  },
+  {
+    id: 'incline-curl',
+    name: 'Incline Dumbbell Curl',
+    primary_muscle: 'biceps',
+    secondary_muscles: [],
+    equipment: 'Dumbbells + Incline Bench',
+    category: 'isolation',
+    instructions: 'Sit on incline bench (45°), arms hanging straight down. Curl both dumbbells up, keeping upper arms vertical. Squeeze at top. Lower fully for a deep stretch.',
+    tips: '⭐ Best bicep exercise for the long head. The stretch at the bottom is the growth signal — do not cut range short.',
+  },
+
   // ── WARM-UP ───────────────────────────────────────────────
   {
     id: 'goblet-squat',

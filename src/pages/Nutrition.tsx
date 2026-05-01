@@ -60,8 +60,22 @@ export default function Nutrition() {
       {/* Header */}
       <div style={{ padding: '52px 20px 24px' }}>
         <p className="label" style={{ marginBottom: 8 }}>Reference</p>
-        <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 6 }}>Eat</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-2)' }}>2,400 kcal · 180g protein daily</p>
+        <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 20 }}>Eat</h1>
+        {/* Daily targets grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          {[
+            { label: 'Calories', value: '2,400', unit: 'kcal', color: 'var(--accent)' },
+            { label: 'Protein',  value: '180',   unit: 'g',    color: 'var(--green)' },
+            { label: 'Carbs',    value: '195',   unit: 'g',    color: '#5B8AF0' },
+            { label: 'Fat',      value: '65',    unit: 'g',    color: '#C97BFF' },
+          ].map(({ label, value, unit, color }) => (
+            <div key={label} className="card" style={{ padding: '12px 10px', textAlign: 'center' }}>
+              <p style={{ fontSize: 20, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</p>
+              <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 3 }}>{unit}</p>
+              <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', marginTop: 2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Rules */}
