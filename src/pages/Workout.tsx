@@ -20,7 +20,7 @@ interface SessionExercise {
 }
 
 const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const TRAINING_DAYS = new Set([0, 1, 2, 3, 5, 6])
+const TRAINING_DAYS = new Set([0, 1, 3, 5, 6])
 
 function WeekCalendar({ todayDOW, selectedDOW, onSelect }: {
   todayDOW: number; selectedDOW: number; onSelect: (dow: number) => void

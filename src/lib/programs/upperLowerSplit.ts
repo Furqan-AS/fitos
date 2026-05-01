@@ -17,8 +17,9 @@ export interface ProgramDayTemplate {
   exercises: ProgramExerciseTemplate[]
 }
 
-// Schedule: Mon / Tue(cardio) / Wed / Fri / Sat / Sun
-// Thu = walk-only day (Zone 2 pace, 30–45 min)
+// Schedule: Mon / Wed / Fri / Sat / Sun
+// Tue + Thu = walk-only days (Zone 2 pace, 30–45 min)
+// Cardio appended to Mon (Zone 2, 20 min) and Sun (VO₂ Max, 40 min)
 export const upperLowerSplit: ProgramDayTemplate[] = [
   {
     day_number: 1,
@@ -79,19 +80,11 @@ export const upperLowerSplit: ProgramDayTemplate[] = [
     ],
   },
   {
-    day_number: 2,
-    day_label: 'Tuesday',
-    focus_label: 'VO₂ Max Day',
-    cardio_type: 'dedicated',
-    cardio_duration_min: 40,
-    exercises: [],
-  },
-  {
     day_number: 0,
     day_label: 'Sunday',
-    focus_label: 'Upper C — Shoulders & Arms',
-    cardio_type: 'zone2',
-    cardio_duration_min: 15,
+    focus_label: 'Upper C — Shoulders & Arms + VO₂',
+    cardio_type: 'dedicated',
+    cardio_duration_min: 40,
     exercises: [
       { exercise_id: 'face-pull',            sets: 3, target_reps_min: 15, target_reps_max: 20, rest_seconds: 60,  sort_order: 1, exercise_type: 'isolation' },
       { exercise_id: 'lateral-raise',        sets: 4, target_reps_min: 15, target_reps_max: 20, rest_seconds: 60,  sort_order: 2, exercise_type: 'isolation' },
@@ -105,8 +98,8 @@ export const upperLowerSplit: ProgramDayTemplate[] = [
 
 import { getDayOfWeek } from '@/lib/utils'
 
-// Maps JS getDay() values to program days (0=Sun, 1=Mon, 2=Tue, 3=Wed, 5=Fri, 6=Sat)
-const DAY_MAP: Record<number, number> = { 1: 1, 2: 2, 3: 3, 5: 5, 6: 6, 0: 0 }
+// Maps JS getDay() values to program days (0=Sun, 1=Mon, 3=Wed, 5=Fri, 6=Sat)
+const DAY_MAP: Record<number, number> = { 1: 1, 3: 3, 5: 5, 6: 6, 0: 0 }
 
 export function getProgramDayByDOW(dow: number): ProgramDayTemplate | null {
   const mapped = DAY_MAP[dow]
