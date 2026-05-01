@@ -7,7 +7,7 @@ import { getTodaysProgramDay, isRestDay } from '@/lib/programs/upperLowerSplit'
 import type { BodyMetric } from '@/types'
 
 export default function Dashboard() {
-  const [name, setName]           = useState<string | null>(null)
+  const [name, setName]               = useState<string | null>(null)
   const [latestWeight, setLatestWeight] = useState<number | null>(null)
   const [sessionDone, setSessionDone]   = useState(false)
 
@@ -30,159 +30,137 @@ export default function Dashboard() {
     load()
   }, [])
 
-  const now     = new Date(new Date().toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' }))
-  const hour    = now.getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const dateStr  = now.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })
+  const now      = new Date(new Date().toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' }))
+  const hour     = now.getHours()
+  const greeting = hour < 5 ? "You're up late" : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const toGoal   = latestWeight ? Math.max(0, latestWeight - 85) : null
+  const pctDone  = latestWeight ? Math.min(((100 - latestWeight) / 15) * 100, 100) : 0
 
   return (
-    <div className="px-5 pt-12 pb-page max-w-md mx-auto space-y-8">
+    <div className="px-5 pb-page max-w-md mx-auto" style={{ paddingTop: '52px' }}>
 
-      {/* Greeting */}
-      <div>
-        <p className="text-white/30 text-sm font-medium">{dateStr}</p>
-        <h1 className="text-4xl font-black text-white tracking-tight mt-1 leading-tight">
-          {greeting},<br />
-          <span style={{ background: 'linear-gradient(90deg, #f59e0b, #f97316)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {name ?? 'Furqan'}.
-          </span>
+      {/* ── Greeting ─────────────────────────────────────── */}
+      <div style={{ marginBottom: 44 }}>
+        <p style={{ fontSize: 15, color: 'var(--text-2)', marginBottom: 6 }}>{greeting}</p>
+        <h1 className="display" style={{ color: 'var(--text)' }}>
+          {name ?? 'Furqan'}.
         </h1>
       </div>
 
-      {/* Today's training — primary card */}
+      {/* ── Today's session ──────────────────────────────── */}
+      <div style={{ marginBottom: 8 }}>
+        <p className="label" style={{ marginBottom: 14 }}>Today</p>
+      </div>
+
       <Link to="/workout">
         <div
-          className="rounded-[24px] p-6 flex items-end justify-between transition-all active:scale-[0.98]"
-          style={{
-            background: sessionDone
-              ? 'linear-gradient(145deg, rgba(34,197,94,0.12) 0%, rgba(16,185,129,0.06) 100%)'
-              : 'linear-gradient(145deg, rgba(245,158,11,0.14) 0%, rgba(249,115,22,0.08) 100%)',
-            border: sessionDone
-              ? '1px solid rgba(34,197,94,0.15)'
-              : '1px solid rgba(249,115,22,0.18)',
-          }}
+          className={sessionDone ? 'card-green' : 'card-accent'}
+          style={{ padding: '24px', marginBottom: 44, transition: 'opacity 0.15s' }}
         >
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-white/30 mb-2">
-              {sessionDone ? 'Completed' : 'Today'}
-            </p>
-            {restDay ? (
-              <>
-                <h2 className="text-2xl font-black text-white leading-tight">Rest & Walk</h2>
-                <p className="text-sm text-white/40 mt-1">30–45 min Zone 2 walk</p>
-              </>
-            ) : programDay ? (
-              <>
-                <h2 className="text-2xl font-black text-white leading-tight">{programDay.focus_label}</h2>
-                <p className="text-sm text-white/40 mt-1">
-                  {programDay.exercises.length > 0
-                    ? `${programDay.exercises.length} exercises · ${programDay.cardio_duration_min} min cardio`
-                    : `${programDay.cardio_duration_min} min VO₂ session`}
-                </p>
-              </>
-            ) : (
-              <h2 className="text-2xl font-black text-white">No session today</h2>
-            )}
-          </div>
-          <div
-            className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ml-4"
-            style={{
-              background: sessionDone
-                ? 'rgba(34,197,94,0.2)'
-                : 'linear-gradient(135deg, #f59e0b, #f97316)',
-            }}
-          >
-            <ArrowRight size={18} className="text-white" />
-          </div>
-        </div>
-      </Link>
-
-      {/* Weight progress */}
-      {latestWeight ? (
-        <div className="space-y-1">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">Body</p>
-          <div className="flex items-baseline gap-6 mt-3">
-            <div>
-              <p className="text-5xl font-black text-white tabular-nums tracking-tight">{latestWeight}</p>
-              <p className="text-xs text-white/30 mt-1 font-medium">kg current</p>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div style={{ flex: 1 }}>
+              {restDay ? (
+                <>
+                  <p style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 6 }}>
+                    Rest &amp; Walk
+                  </p>
+                  <p style={{ fontSize: 14, color: 'var(--text-2)' }}>30–45 min Zone 2 walk</p>
+                </>
+              ) : programDay ? (
+                <>
+                  <p style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 6, lineHeight: 1.2 }}>
+                    {programDay.focus_label}
+                  </p>
+                  <p style={{ fontSize: 14, color: 'var(--text-2)' }}>
+                    {programDay.exercises.length > 0
+                      ? `${programDay.exercises.length} exercises · ${programDay.cardio_duration_min} min cardio`
+                      : `${programDay.cardio_duration_min} min VO₂ session`}
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-2)' }}>No session today</p>
+              )}
             </div>
-            {toGoal !== null && toGoal > 0 && (
-              <>
-                <div className="h-10 w-px bg-white/8" />
-                <div>
-                  <p className="text-5xl font-black tabular-nums tracking-tight"
-                    style={{ color: 'rgba(245,158,11,0.7)' }}>{toGoal.toFixed(1)}</p>
-                  <p className="text-xs text-white/30 mt-1 font-medium">kg to go</p>
-                </div>
-              </>
-            )}
-            {toGoal === 0 && (
-              <p className="text-sm font-bold text-green-400">Goal reached 🎯</p>
-            )}
+            <div
+              style={{
+                width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 16,
+                background: sessionDone ? 'rgba(24,200,122,0.2)' : 'var(--accent)',
+              }}
+            >
+              <ArrowRight size={20} color={sessionDone ? '#18C87A' : '#000'} strokeWidth={2.5} />
+            </div>
           </div>
 
-          {/* Progress bar toward 85kg */}
-          {toGoal !== null && (
-            <div className="mt-4">
-              <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${Math.min(((100 - latestWeight) / (100 - 85)) * 100, 100)}%`,
-                    background: 'linear-gradient(90deg, #f59e0b, #f97316)',
-                  }}
-                />
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-[10px] text-white/20">100 kg</span>
-                <span className="text-[10px] text-white/20">Goal 85 kg</span>
-              </div>
+          {sessionDone && (
+            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(24,200,122,0.15)' }}>
+              <p style={{ fontSize: 13, color: '#18C87A', fontWeight: 600 }}>Session complete ✓</p>
             </div>
           )}
         </div>
-      ) : (
-        /* No weight logged yet */
-        <Link to="/progress">
-          <div
-            className="rounded-[20px] p-4 flex items-center gap-3 transition-all active:scale-[0.98]"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-          >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.12)' }}>
-              <Scale size={16} className="text-amber-400" />
-            </div>
+      </Link>
+
+      {/* ── Body ─────────────────────────────────────────── */}
+      <p className="label" style={{ marginBottom: 20 }}>Body</p>
+
+      {latestWeight ? (
+        <div style={{ marginBottom: 44 }}>
+          {/* Numbers row */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 32, marginBottom: 24 }}>
             <div>
-              <p className="text-sm font-semibold text-white">Log today's weight</p>
-              <p className="text-xs text-white/35">Track your 100 → 85 kg journey</p>
+              <p className="metric" style={{ color: 'var(--text)' }}>{latestWeight}</p>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>kg now</p>
             </div>
-            <ArrowRight size={14} className="text-white/20 ml-auto" />
+            {toGoal !== null && toGoal > 0 && (
+              <div>
+                <p className="metric-sm" style={{ color: 'var(--accent)' }}>{toGoal.toFixed(1)}</p>
+                <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>kg to goal</p>
+              </div>
+            )}
+            {toGoal === 0 && (
+              <div>
+                <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>Goal reached</p>
+              </div>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 }}>
+            <div style={{ height: '100%', width: `${pctDone}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.6s ease' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>100 kg</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Goal · 85 kg</span>
+          </div>
+        </div>
+      ) : (
+        <Link to="/progress" style={{ display: 'block', marginBottom: 44 }}>
+          <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <Scale size={18} color="var(--accent)" />
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Log your weight</p>
+              <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>Track progress toward 85 kg</p>
+            </div>
+            <ArrowRight size={14} color="var(--text-3)" style={{ marginLeft: 'auto' }} />
           </div>
         </Link>
       )}
 
-      {/* Nutrition target — single line, no logging */}
-      <div className="space-y-3">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">Today's targets</p>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Calories', value: '2,400', unit: 'kcal', color: 'text-white' },
-            { label: 'Protein',  value: '180g',  unit: 'minimum', color: 'text-green-400' },
-          ].map(({ label, value, unit, color }) => (
-            <div
-              key={label}
-              className="rounded-[18px] p-4"
-              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-            >
-              <p className={`text-2xl font-black tabular-nums ${color}`}>{value}</p>
-              <p className="text-xs text-white/30 mt-1">{label}</p>
-              <p className="text-[10px] text-white/18 mt-0.5">{unit}</p>
-            </div>
-          ))}
+      {/* ── Daily targets ─────────────────────────────────── */}
+      <p className="label" style={{ marginBottom: 20 }}>Daily targets</p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <div className="card" style={{ padding: '20px 16px' }}>
+          <p style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>2,400</p>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 4 }}>kcal</p>
         </div>
-        <p className="text-xs text-white/25 px-1">
-          Hit protein first. Everything else fills around it. Open Eat tab for food reference.
-        </p>
+        <div className="card" style={{ padding: '20px 16px' }}>
+          <p style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--green)', fontVariantNumeric: 'tabular-nums' }}>180g</p>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 4 }}>protein</p>
+        </div>
       </div>
+      <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6 }}>
+        Protein first — build meals around it. Open Eat tab for food reference.
+      </p>
 
     </div>
   )

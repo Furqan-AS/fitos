@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Info, TrendingUp, CheckCircle, RotateCcw, CopyCheck } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { ChevronDown, Info, Check, RotateCcw, CopyCheck } from 'lucide-react'
 import type { Exercise } from '@/types'
 import type { ProgramExerciseTemplate } from '@/lib/programs/upperLowerSplit'
 import SetLogger from './SetLogger'
@@ -69,23 +68,21 @@ export default function ExerciseCard({
   isActive,
   onActivate,
 }: ExerciseCardProps) {
-  const [loggedSets, setLoggedSets] = useState<LoggedSet[]>(initialCompletedSets)
-  const [showTips, setShowTips] = useState(false)
-  const [showRest, setShowRest] = useState(false)
-  const [activeSet, setActiveSet] = useState(Math.min(initialCompletedSets.length + 1, template.sets))
-  const [imgFailed, setImgFailed] = useState(false)
-  const [globalWeight, setGlobalWeight] = useState<number | null>(null)
+  const [loggedSets, setLoggedSets]       = useState<LoggedSet[]>(initialCompletedSets)
+  const [showTips, setShowTips]           = useState(false)
+  const [showRest, setShowRest]           = useState(false)
+  const [activeSet, setActiveSet]         = useState(Math.min(initialCompletedSets.length + 1, template.sets))
+  const [imgFailed, setImgFailed]         = useState(false)
+  const [globalWeight, setGlobalWeight]   = useState<number | null>(null)
   const [applyWeightStr, setApplyWeightStr] = useState(String(suggestedWeight))
 
-  const allDone = loggedSets.length >= template.sets
-  const hasLongFemurNote = exercise.tips.includes('⚠️') || exercise.tips.includes('⭐')
-  const isAssisted = !!exercise.isAssisted
+  const allDone   = loggedSets.length >= template.sets
   const imgFolder = EXERCISE_IMGS[exercise.id]
-  const imgBase = imgFolder ? `${IMG_BASE}/${imgFolder}` : null
+  const imgBase   = imgFolder ? `${IMG_BASE}/${imgFolder}` : null
 
   function handleSetComplete(weight: number, reps: number, rpe: number) {
     const newSet: LoggedSet = { set_number: activeSet, weight_kg: weight, reps_completed: reps, rpe }
-    onSetLogged?.(newSet)          // ← save to Supabase immediately
+    onSetLogged?.(newSet)
     const updated = [...loggedSets, newSet]
     setLoggedSets(updated)
     if (updated.length >= template.sets) {
@@ -102,18 +99,71 @@ export default function ExerciseCard({
     const lastSet = loggedSets[loggedSets.length - 1]
     const updated = loggedSets.slice(0, -1)
     setLoggedSets(updated)
-    setActiveSet(loggedSets.length) // go back one set number
-    onSetUnlogged?.(lastSet.set_number)  // ← delete from Supabase immediately
+    setActiveSet(loggedSets.length)
+    onSetUnlogged?.(lastSet.set_number)
     if (wasAllDone) onUncomplete?.()
   }
 
   function applyWeightToAll() {
     const parsed = parseFloat(applyWeightStr)
-    if (!isNaN(parsed) && parsed >= 0) {
-      setGlobalWeight(Math.round(parsed * 4) / 4)
-    }
+    if (!isNaN(parsed) && parsed >= 0) setGlobalWeight(Math.round(parsed * 4) / 4)
   }
 
+  /* ── Collapsed / done row ── */
+  if (!isActive) {
+    return (
+      <button
+        onClick={onActivate}
+        style={{
+          width: '100%', textAlign: 'left',
+          display: 'flex', alignItems: 'center', gap: 16,
+          padding: '16px 0',
+          borderBottom: '1px solid var(--border)',
+          background: 'transparent',
+          cursor: 'pointer',
+          transition: 'opacity 0.15s',
+        }}
+      >
+        {/* Number / check */}
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: allDone ? 'var(--green)' : 'var(--surface-hi)',
+          border: allDone ? 'none' : '1px solid var(--border-hi)',
+        }}>
+          {allDone
+            ? <Check size={14} color="#000" strokeWidth={3} />
+            : <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>{template.sort_order}</span>
+          }
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: allDone ? 'var(--text-2)' : 'var(--text)', marginBottom: 3 }}>
+            {exercise.name}
+            {progressDirection === 'increase' && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', marginLeft: 8 }}>↑ weight</span>
+            )}
+            {progressDirection === 'deload' && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginLeft: 8 }}>deload</span>
+            )}
+          </p>
+          {allDone ? (
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              {loggedSets.map(s => `${s.weight_kg}×${s.reps_completed}`).join(', ')}
+            </p>
+          ) : (
+            <p style={{ fontSize: 12, color: 'var(--text-3)' }}>
+              {template.sets} × {template.target_reps_min}–{template.target_reps_max} · {suggestedWeight} kg
+            </p>
+          )}
+        </div>
+
+        <ChevronDown size={16} color="var(--text-3)" />
+      </button>
+    )
+  }
+
+  /* ── Active / expanded card ── */
   return (
     <>
       {showRest && (
@@ -125,177 +175,144 @@ export default function ExerciseCard({
       )}
 
       <div
-        className="rounded-3xl border transition-all duration-200"
-        style={{
-          background: allDone
-            ? 'rgba(34,197,94,0.05)'
-            : isActive
-            ? 'rgba(249,115,22,0.06)'
-            : 'rgba(255,255,255,0.03)',
-          borderColor: allDone
-            ? 'rgba(34,197,94,0.2)'
-            : isActive
-            ? 'rgba(249,115,22,0.2)'
-            : 'rgba(255,255,255,0.07)',
-          boxShadow: isActive ? '0 4px 24px rgba(249,115,22,0.08)' : 'none',
-        }}
+        className="card-hi"
+        style={{ padding: '20px', marginBottom: 0 }}
       >
-        {/* Header */}
-        <button className="w-full flex items-start gap-3 p-4 text-left" onClick={onActivate}>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 mt-0.5"
-            style={{
-              background: allDone
-                ? 'linear-gradient(135deg, #22c55e, #10b981)'
-                : isActive
-                ? 'linear-gradient(135deg, #f59e0b, #f97316)'
-                : 'rgba(255,255,255,0.08)',
-              color: allDone || isActive ? 'white' : 'rgba(255,255,255,0.4)',
-              boxShadow: allDone
-                ? '0 0 10px rgba(34,197,94,0.3)'
-                : isActive
-                ? '0 0 10px rgba(249,115,22,0.3)'
-                : 'none',
-            }}>
-            {allDone ? <CheckCircle size={14} strokeWidth={2.5} /> : template.sort_order}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-bold text-white text-sm leading-snug">{exercise.name}</h3>
-              {progressDirection === 'increase' && (
-                <span className="text-[10px] font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <TrendingUp size={9} /> +weight
-                </span>
-              )}
-              {progressDirection === 'deload' && (
-                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                  Deload
-                </span>
-              )}
-              {hasLongFemurNote && (
-                <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
-                  Form tip
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-white/35 mt-0.5">
-              {template.sets} × {template.target_reps_min}–{template.target_reps_max} reps · {suggestedWeight} kg suggested
+        {/* Card header */}
+        <button
+          onClick={onActivate}
+          style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}
+        >
+          <div>
+            <p style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--text)', marginBottom: 4 }}>
+              {exercise.name}
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              {template.sets} × {template.target_reps_min}–{template.target_reps_max} reps
               {lastWeight ? ` · last: ${lastWeight} kg` : ''}
             </p>
           </div>
-
-          <ChevronRight size={15}
-            className={cn('text-white/20 shrink-0 mt-1 transition-transform', isActive && 'rotate-90')} />
+          <ChevronDown size={16} color="var(--text-3)" style={{ marginTop: 4, transform: 'rotate(180deg)' }} />
         </button>
 
-        {/* Expanded */}
-        {isActive && (
-          <div className="px-4 pb-4 space-y-3">
-            {/* Tips toggle */}
-            <button
-              onClick={() => setShowTips(!showTips)}
-              className="flex items-center gap-2 text-xs text-white/30 hover:text-white/60 transition-colors">
-              <Info size={12} />
-              {showTips ? 'Hide' : 'Show'} form tips
-              <ChevronDown size={11} className={cn('transition-transform', showTips && 'rotate-180')} />
-            </button>
+        {/* Assisted note */}
+        {exercise.isAssisted && (
+          <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', marginBottom: 16 }}>
+            <p style={{ fontSize: 12, color: '#a5b4fc', fontWeight: 600 }}>
+              Assisted machine — lower number = harder. Log what the machine shows.
+            </p>
+          </div>
+        )}
 
-            {showTips && (
-              <div className="p-3 rounded-2xl space-y-3"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                {imgBase && !imgFailed && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="relative">
-                      <img
-                        src={`${imgBase}/0.jpg`}
-                        alt={`${exercise.name} start`}
-                        onError={() => setImgFailed(true)}
-                        className="w-full rounded-xl object-cover"
-                        style={{ background: 'rgba(0,0,0,0.3)' }}
-                      />
-                      <span className="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white/50 bg-black/50 px-1.5 py-0.5 rounded-full">START</span>
-                    </div>
-                    <div className="relative">
-                      <img
-                        src={`${imgBase}/1.jpg`}
-                        alt={`${exercise.name} end`}
-                        onError={() => setImgFailed(true)}
-                        className="w-full rounded-xl object-cover"
-                        style={{ background: 'rgba(0,0,0,0.3)' }}
-                      />
-                      <span className="absolute bottom-1.5 left-1.5 text-[9px] font-bold text-white/50 bg-black/50 px-1.5 py-0.5 rounded-full">END</span>
-                    </div>
-                  </div>
-                )}
-                <p className="text-xs text-white/50 leading-relaxed">{exercise.instructions}</p>
-                <p className={cn('text-xs leading-relaxed', hasLongFemurNote ? 'text-amber-300/80' : 'text-white/35')}>
-                  {exercise.tips}
-                </p>
-              </div>
-            )}
+        {/* Apply to all sets */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 14px', borderRadius: 12,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          marginBottom: 16,
+        }}>
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-3)', flexShrink: 0 }}>
+            All sets
+          </span>
+          <input
+            type="number" inputMode="decimal"
+            value={applyWeightStr}
+            onChange={(e) => setApplyWeightStr(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') applyWeightToAll() }}
+            style={{
+              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              fontSize: 16, fontWeight: 700, color: 'var(--text)', textAlign: 'center',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          />
+          <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>kg</span>
+          <button
+            onClick={applyWeightToAll}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '7px 14px', borderRadius: 9,
+              background: 'var(--accent)', color: '#000', fontSize: 12, fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            <CopyCheck size={12} strokeWidth={2.5} />
+            Apply
+          </button>
+        </div>
 
-            {isAssisted && (
-              <div className="px-3 py-2 rounded-2xl text-xs"
-                style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                <p className="text-indigo-300 font-semibold mb-0.5">Assisted machine — weight works in reverse</p>
-                <p className="text-white/40">The number you select on the machine is subtracted from your bodyweight. Lower assist = harder. Log what the machine shows.</p>
-              </div>
-            )}
-
-            {/* Apply weight to all sets */}
-            <div className="flex items-center gap-2 p-3 rounded-2xl"
-              style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.12)' }}>
-              <span className="text-[10px] text-white/40 uppercase tracking-widest shrink-0">All sets</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={applyWeightStr}
-                onChange={(e) => setApplyWeightStr(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') applyWeightToAll() }}
-                className="flex-1 bg-transparent text-white font-black text-lg text-center outline-none border-b border-white/20 focus:border-amber-400 transition-colors w-0"
-                style={{ appearance: 'textfield' }}
+        {/* Set list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          {Array.from({ length: template.sets }, (_, i) => i + 1).map((setNum) => {
+            const logged = loggedSets.find((s) => s.set_number === setNum)
+            return (
+              <SetLogger
+                key={setNum}
+                setNumber={setNum}
+                targetRepsMin={template.target_reps_min}
+                targetRepsMax={template.target_reps_max}
+                suggestedWeight={suggestedWeight}
+                previousWeight={lastWeight}
+                overrideWeight={globalWeight ?? undefined}
+                isAssisted={!!exercise.isAssisted}
+                onComplete={handleSetComplete}
+                completed={!!logged}
+                completedWeight={logged?.weight_kg}
+                completedReps={logged?.reps_completed}
               />
-              <span className="text-xs text-white/30 shrink-0">kg</span>
-              <button
-                onClick={applyWeightToAll}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white shrink-0 active:scale-95 transition-all"
-                style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-                <CopyCheck size={12} /> Apply
-              </button>
-            </div>
+            )
+          })}
+        </div>
 
-            {/* Sets */}
-            <div className="space-y-2">
-              {Array.from({ length: template.sets }, (_, i) => i + 1).map((setNum) => {
-                const logged = loggedSets.find((s) => s.set_number === setNum)
-                return (
-                  <SetLogger
-                    key={setNum}
-                    setNumber={setNum}
-                    targetRepsMin={template.target_reps_min}
-                    targetRepsMax={template.target_reps_max}
-                    suggestedWeight={suggestedWeight}
-                    previousWeight={lastWeight}
-                    overrideWeight={globalWeight ?? undefined}
-                    isAssisted={isAssisted}
-                    onComplete={handleSetComplete}
-                    completed={!!logged}
-                    completedWeight={logged?.weight_kg}
-                    completedReps={logged?.reps_completed}
-                  />
-                )
-              })}
-            </div>
+        {/* Undo + tips */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {loggedSets.length > 0 ? (
+            <button
+              onClick={handleUndo}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <RotateCcw size={11} />
+              Undo last set
+            </button>
+          ) : <div />}
 
-            {/* Undo last set */}
-            {loggedSets.length > 0 && (
-              <button
-                onClick={handleUndo}
-                className="flex items-center gap-2 text-xs text-white/25 hover:text-white/50 transition-colors mx-auto">
-                <RotateCcw size={11} />
-                Undo last set
-              </button>
+          <button
+            onClick={() => setShowTips(!showTips)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            <Info size={11} />
+            {showTips ? 'Hide tips' : 'Form tips'}
+          </button>
+        </div>
+
+        {/* Form tips */}
+        {showTips && (
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            {imgBase && !imgFailed && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                {['start', 'end'].map((label, idx) => (
+                  <div key={label} style={{ position: 'relative' }}>
+                    <img
+                      src={`${imgBase}/${idx}.jpg`}
+                      alt={`${exercise.name} ${label}`}
+                      onError={() => setImgFailed(true)}
+                      style={{ width: '100%', borderRadius: 10, display: 'block', background: 'var(--surface)' }}
+                    />
+                    <span style={{
+                      position: 'absolute', bottom: 6, left: 6,
+                      fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
+                      color: 'rgba(255,255,255,0.6)', background: 'rgba(0,0,0,0.6)',
+                      padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase',
+                    }}>
+                      {label}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
+            <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 8 }}>{exercise.instructions}</p>
+            <p style={{ fontSize: 12, color: exercise.tips.includes('⚠️') || exercise.tips.includes('⭐') ? 'var(--accent)' : 'var(--text-3)', lineHeight: 1.6 }}>
+              {exercise.tips}
+            </p>
           </div>
         )}
       </div>

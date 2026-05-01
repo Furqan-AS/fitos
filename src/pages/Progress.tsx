@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Target, CheckCircle, Dumbbell } from 'lucide-react'
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, ReferenceLine,
-} from 'recharts'
+import { Plus, Target, CheckCircle } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { today } from '@/lib/utils'
 import { calcE1RM } from '@/lib/progression'
@@ -12,30 +9,25 @@ import type { BodyMetric } from '@/types'
 
 const KEY_LIFTS = ['bench-press', 'low-bar-squat', 'sumo-deadlift', 'barbell-row']
 
-interface CompletedSession {
-  id: string
-  date: string
-  focus?: string
-  exerciseCount: number
-}
+interface CompletedSession { id: string; date: string; exerciseCount: number }
 
-const Tip = ({ active, payload, label }: { active?: boolean; payload?: { value: number; color: string }[]; label?: string }) => {
+const ChartTip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-xl px-3 py-2 text-xs" style={{ background: 'rgba(8,8,14,0.98)', border: '1px solid rgba(255,255,255,0.1)' }}>
-      <p className="text-white/40 mb-1">{label}</p>
-      <p className="font-black text-white">{payload[0].value}</p>
+    <div style={{ background: 'var(--surface-hi)', border: '1px solid var(--border-hi)', borderRadius: 10, padding: '8px 12px', fontSize: 12 }}>
+      <p style={{ color: 'var(--text-2)', marginBottom: 4 }}>{label}</p>
+      <p style={{ color: 'var(--text)', fontWeight: 800 }}>{payload[0].value}</p>
     </div>
   )
 }
 
 export default function Progress() {
-  const [weights, setWeights]         = useState<BodyMetric[]>([])
-  const [sessions, setSessions]       = useState<CompletedSession[]>([])
-  const [strengthData, setStrengthData] = useState<Record<string, { date: string; e1rm: number }[]>>({})
+  const [weights, setWeights]             = useState<BodyMetric[]>([])
+  const [sessions, setSessions]           = useState<CompletedSession[]>([])
+  const [strengthData, setStrengthData]   = useState<Record<string, { date: string; e1rm: number }[]>>({})
   const [showWeightLog, setShowWeightLog] = useState(false)
-  const [newWeight, setNewWeight]     = useState('')
-  const [loading, setLoading]         = useState(true)
+  const [newWeight, setNewWeight]         = useState('')
+  const [loading, setLoading]             = useState(true)
 
   useEffect(() => { load() }, [])
 
@@ -44,83 +36,42 @@ export default function Progress() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
 
-    // Bodyweight
-    const { data: wt } = await supabase
-      .from('body_metrics')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: true })
-      .limit(60)
-
-    // Completed sessions
-    const { data: userSessions } = await supabase
-      .from('workout_sessions')
-      .select('id, date, completed')
-      .eq('user_id', user.id)
-      .eq('completed', true)
-      .order('date', { ascending: false })
-      .limit(30)
+    const { data: wt } = await supabase.from('body_metrics').select('*').eq('user_id', user.id).order('date', { ascending: true }).limit(60)
+    const { data: userSessions } = await supabase.from('workout_sessions').select('id, date, completed').eq('user_id', user.id).eq('completed', true).order('date', { ascending: false }).limit(30)
 
     if (wt) setWeights(wt as BodyMetric[])
 
     if (userSessions && userSessions.length > 0) {
       const sessionIds = userSessions.map((s: { id: string }) => s.id)
-
-      // Count exercises per session
-      const { data: exLogs } = await supabase
-        .from('exercise_logs')
-        .select('session_id, exercise_id')
-        .in('session_id', sessionIds)
+      const { data: exLogs } = await supabase.from('exercise_logs').select('session_id, exercise_id').in('session_id', sessionIds)
 
       const countBySession: Record<string, Set<string>> = {}
       for (const l of (exLogs ?? []) as { session_id: string; exercise_id: string }[]) {
         if (!countBySession[l.session_id]) countBySession[l.session_id] = new Set()
         countBySession[l.session_id].add(l.exercise_id)
       }
+      setSessions(userSessions.map((s: { id: string; date: string }) => ({
+        id: s.id, date: s.date, exerciseCount: countBySession[s.id]?.size ?? 0,
+      })))
 
-      setSessions(
-        userSessions.map((s: { id: string; date: string }) => ({
-          id: s.id,
-          date: s.date,
-          exerciseCount: countBySession[s.id]?.size ?? 0,
-        }))
-      )
-
-      // Strength e1RM — only from this user's sessions
-      const { data: strengthLogs } = await supabase
-        .from('exercise_logs')
-        .select('exercise_id, weight_kg, reps_completed, session_id')
-        .in('session_id', sessionIds)
-        .in('exercise_id', KEY_LIFTS)
-
+      const { data: strengthLogs } = await supabase.from('exercise_logs').select('exercise_id, weight_kg, reps_completed, session_id').in('session_id', sessionIds).in('exercise_id', KEY_LIFTS)
       if (strengthLogs) {
-        // Map session_id → date
         const sessionDateMap: Record<string, string> = {}
         for (const s of userSessions as { id: string; date: string }[]) sessionDateMap[s.id] = s.date
-
         const grouped: Record<string, Record<string, number[]>> = {}
         for (const log of strengthLogs as { exercise_id: string; weight_kg: number; reps_completed: number; session_id: string }[]) {
-          const date = sessionDateMap[log.session_id]
-          if (!date) continue
+          const date = sessionDateMap[log.session_id]; if (!date) continue
           if (!grouped[log.exercise_id]) grouped[log.exercise_id] = {}
           if (!grouped[log.exercise_id][date]) grouped[log.exercise_id][date] = []
           grouped[log.exercise_id][date].push(calcE1RM(log.weight_kg, log.reps_completed))
         }
-
         const result: Record<string, { date: string; e1rm: number }[]> = {}
         for (const [ex, dates] of Object.entries(grouped)) {
-          result[ex] = Object.entries(dates)
-            .map(([date, e1rms]) => ({
-              date,
-              e1rm: Math.round(Math.max(...e1rms) * 10) / 10,
-            }))
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .slice(-16)
+          result[ex] = Object.entries(dates).map(([date, e1rms]) => ({ date, e1rm: Math.round(Math.max(...e1rms) * 10) / 10 })).sort((a, b) => a.date.localeCompare(b.date)).slice(-16)
         }
         setStrengthData(result)
       }
     }
-
     setLoading(false)
   }
 
@@ -130,157 +81,126 @@ export default function Progress() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase.from('body_metrics').upsert({ user_id: user.id, date: today(), weight_kg: val })
-    setShowWeightLog(false)
-    setNewWeight('')
-    load()
+    setShowWeightLog(false); setNewWeight(''); load()
   }
 
   const latestWeight = weights.at(-1)?.weight_kg
   const startWeight  = weights[0]?.weight_kg
   const totalLost    = startWeight && latestWeight && latestWeight < startWeight ? +(startWeight - latestWeight).toFixed(1) : null
   const toGoal       = latestWeight ? +(latestWeight - 85).toFixed(1) : null
+  const pctDone      = latestWeight ? Math.min(((100 - latestWeight) / 15) * 100, 100) : 0
 
-  const weightChartData = weights.map((m) => ({
-    date: new Date(m.date + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }),
-    weight: m.weight_kg,
-  }))
-
-  function formatDate(d: string) {
+  function fmtDate(d: string) {
     return new Date(d + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
+  }
+  function fmtShort(d: string) {
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
   }
 
   return (
-    <div className="px-5 pt-12 pb-page max-w-md mx-auto space-y-8">
+    <div style={{ padding: '52px 20px 0', maxWidth: 448, margin: '0 auto' }} className="pb-page">
 
       {/* Header */}
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">Transformation</p>
-        <h1 className="text-4xl font-black text-white tracking-tight mt-2">Progress</h1>
-        <p className="text-sm text-white/35 mt-1">100 kg → 85 kg · 24 weeks</p>
+      <div style={{ marginBottom: 36 }}>
+        <p className="label" style={{ marginBottom: 8 }}>Transformation</p>
+        <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 6 }}>Progress</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-2)' }}>100 kg → 85 kg · 24 weeks</p>
       </div>
 
       {/* Weight stats */}
       {latestWeight ? (
-        <div className="space-y-4">
-          <div className="flex items-baseline gap-6">
+        <div style={{ marginBottom: 36 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 28, marginBottom: 20 }}>
             <div>
-              <p className="text-5xl font-black text-white tabular-nums tracking-tight">{latestWeight}</p>
-              <p className="text-xs text-white/30 mt-1">kg now</p>
+              <p style={{ fontSize: 64, fontWeight: 900, letterSpacing: '-0.045em', color: 'var(--text)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{latestWeight}</p>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 6 }}>kg now</p>
             </div>
             {totalLost && totalLost > 0 && (
               <>
-                <div className="h-10 w-px bg-white/8" />
+                <div style={{ width: 1, height: 48, background: 'var(--border)', marginBottom: 22 }} />
                 <div>
-                  <p className="text-3xl font-black text-green-400 tabular-nums">−{totalLost}</p>
-                  <p className="text-xs text-white/30 mt-1">kg lost</p>
+                  <p style={{ fontSize: 40, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--green)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>−{totalLost}</p>
+                  <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 6 }}>kg lost</p>
                 </div>
               </>
             )}
             {toGoal !== null && toGoal > 0 && (
               <>
-                <div className="h-10 w-px bg-white/8" />
+                <div style={{ width: 1, height: 48, background: 'var(--border)', marginBottom: 22 }} />
                 <div>
-                  <p className="text-3xl font-black tabular-nums" style={{ color: 'rgba(245,158,11,0.8)' }}>{toGoal}</p>
-                  <p className="text-xs text-white/30 mt-1">kg to go</p>
+                  <p style={{ fontSize: 40, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{toGoal}</p>
+                  <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 6 }}>kg to go</p>
                 </div>
               </>
             )}
           </div>
-
-          {/* Goal bar */}
-          <div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${Math.min(Math.max(((100 - (latestWeight ?? 100)) / 15) * 100, 0), 100)}%`,
-                  background: 'linear-gradient(90deg, #f59e0b, #f97316)',
-                }}
-              />
-            </div>
-            <div className="flex justify-between mt-1">
-              <span className="text-[10px] text-white/20">Start 100 kg</span>
-              <span className="text-[10px] text-amber-500/60 flex items-center gap-1"><Target size={8} /> Goal 85 kg</span>
-            </div>
+          <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', marginBottom: 8 }}>
+            <div style={{ height: '100%', width: `${pctDone}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.6s ease' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Start 100 kg</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Target size={9} color="var(--accent)" /> Goal 85 kg
+            </span>
           </div>
         </div>
       ) : !loading && (
-        <div
-          className="rounded-[20px] p-5 text-center space-y-2"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          <p className="text-sm font-semibold text-white">Log your first weight</p>
-          <p className="text-xs text-white/30">Start tracking your 100 → 85 kg journey</p>
+        <div className="card" style={{ padding: '20px', textAlign: 'center', marginBottom: 36 }}>
+          <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>Log your first weight</p>
+          <p style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 6 }}>Start tracking your 100 → 85 kg journey</p>
         </div>
       )}
 
       {/* Log weight */}
       {showWeightLog ? (
-        <div className="rounded-[20px] p-5 space-y-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-          <p className="text-sm font-bold text-white">Today's weight</p>
-          <div className="flex gap-3 items-center">
-            <div className="relative flex-1">
+        <div className="card" style={{ padding: 20, marginBottom: 36 }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>Today's weight</p>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
               <input
-                type="number" step="0.1" placeholder="e.g. 99.5"
-                value={newWeight} onChange={(e) => setNewWeight(e.target.value)}
+                type="number" step="0.1" placeholder="99.5" value={newWeight}
+                onChange={(e) => setNewWeight(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && logWeight()}
                 autoFocus
-                className="w-full rounded-2xl px-4 py-3.5 text-white placeholder-white/20 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 pr-10"
-                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+                style={{ width: '100%', background: 'var(--surface-hi)', border: '1px solid var(--border-hi)', borderRadius: 14, padding: '14px 44px 14px 16px', color: 'var(--text)', fontSize: 16, fontWeight: 600, outline: 'none' }}
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 text-xs font-medium">kg</span>
+              <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--text-2)' }}>kg</span>
             </div>
-            <button
-              onClick={logWeight}
-              className="px-6 py-3.5 rounded-2xl font-bold text-white text-sm active:scale-95 transition-all"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}
-            >
-              Save
-            </button>
+            <button onClick={logWeight} className="btn-primary" style={{ padding: '14px 22px', fontSize: 14, flexShrink: 0 }}>Save</button>
           </div>
-          <button onClick={() => setShowWeightLog(false)} className="text-xs text-white/25 hover:text-white/50 w-full text-center transition-colors">
+          <button onClick={() => setShowWeightLog(false)} style={{ fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', marginTop: 12, display: 'block', width: '100%', textAlign: 'center' }}>
             Cancel
           </button>
         </div>
       ) : (
         <button
           onClick={() => setShowWeightLog(true)}
-          className="flex items-center gap-3 transition-all active:scale-[0.98] w-full text-left"
+          style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 36, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}
-          >
-            <Plus size={15} className="text-white" strokeWidth={2.5} />
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Plus size={16} color="#000" strokeWidth={2.5} />
           </div>
-          <span className="text-sm font-semibold text-white/60">Log today's weight</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-2)' }}>Log today's weight</span>
         </button>
       )}
 
-      {/* Recent sessions — immediately useful */}
+      {/* Recent sessions */}
       {sessions.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">Sessions</p>
-          <div className="space-y-2">
-            {sessions.slice(0, 8).map((s) => (
+        <div style={{ marginBottom: 36 }}>
+          <p className="label" style={{ marginBottom: 16 }}>Sessions</p>
+          <div>
+            {sessions.slice(0, 8).map((s, i) => (
               <div
                 key={s.id}
-                className="rounded-[18px] px-4 py-3.5 flex items-center gap-4"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: i < sessions.length - 1 ? '1px solid var(--border)' : 'none' }}
               >
-                <div
-                  className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(34,197,94,0.12)' }}
-                >
-                  <CheckCircle size={14} className="text-green-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white">{formatDate(s.date)}</p>
-                  <p className="text-xs text-white/30 mt-0.5">
-                    {s.exerciseCount > 0 ? `${s.exerciseCount} exercises logged` : 'Session complete'}
+                <CheckCircle size={16} color="var(--green)" />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{fmtDate(s.date)}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                    {s.exerciseCount > 0 ? `${s.exerciseCount} exercises` : 'Session complete'}
                   </p>
                 </div>
-                <Dumbbell size={13} className="text-white/15 shrink-0" />
               </div>
             ))}
           </div>
@@ -288,29 +208,24 @@ export default function Progress() {
       )}
 
       {!loading && sessions.length === 0 && weights.length === 0 && (
-        <div className="py-12 text-center space-y-3">
-          <p className="text-white/20 text-sm leading-relaxed">
-            Complete your first session and log your weight.<br />
-            Your transformation timeline appears here.
-          </p>
+        <div style={{ paddingTop: 48, textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: 'var(--text-3)', lineHeight: 1.7 }}>Complete your first session and log your weight.<br />Your transformation timeline appears here.</p>
         </div>
       )}
 
       {/* Bodyweight chart */}
-      {weightChartData.length > 1 && (
-        <div className="space-y-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">Bodyweight</p>
-          <div className="rounded-[20px] p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={weightChartData} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
+      {weights.length > 1 && (
+        <div style={{ marginBottom: 36 }}>
+          <p className="label" style={{ marginBottom: 16 }}>Bodyweight</p>
+          <div className="card" style={{ padding: '20px 16px 12px' }}>
+            <ResponsiveContainer width="100%" height={160}>
+              <LineChart data={weights.map(m => ({ date: fmtShort(m.date), weight: m.weight_kg }))} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 10 }} tickLine={false} axisLine={false} domain={['dataMin - 1', 'dataMax + 1']} />
-                <Tooltip content={<Tip />} />
-                <ReferenceLine y={85} stroke="rgba(245,158,11,0.4)" strokeDasharray="4 4" />
-                <Line type="monotone" dataKey="weight" stroke="#f59e0b" strokeWidth={2}
-                  dot={{ fill: '#f59e0b', r: 3, strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: '#f59e0b', stroke: 'rgba(245,158,11,0.3)', strokeWidth: 6 }} />
+                <XAxis dataKey="date" tick={{ fill: 'var(--text-3)', fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fill: 'var(--text-3)', fontSize: 10 }} tickLine={false} axisLine={false} domain={['dataMin - 1', 'dataMax + 1']} />
+                <Tooltip content={<ChartTip />} />
+                <ReferenceLine y={85} stroke="rgba(233,160,32,0.35)" strokeDasharray="4 4" />
+                <Line type="monotone" dataKey="weight" stroke="var(--accent)" strokeWidth={2} dot={{ fill: 'var(--accent)', r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: 'var(--accent)', stroke: 'rgba(233,160,32,0.3)', strokeWidth: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -318,51 +233,40 @@ export default function Progress() {
       )}
 
       {/* Strength charts */}
-      {KEY_LIFTS.filter((id) => (strengthData[id]?.length ?? 0) > 0).length > 0 && (
-        <div className="space-y-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">Strength · Est. 1RM</p>
-          {KEY_LIFTS.filter((id) => (strengthData[id]?.length ?? 0) > 0).map((id) => {
-            const ex       = exerciseLibrary.find((e) => e.id === id)
-            const data     = strengthData[id] ?? []
-            const latest   = data.at(-1)?.e1rm
-            const first    = data[0]?.e1rm
-            const gained   = latest && first && latest > first ? +(latest - first).toFixed(1) : null
-            const chartData = data.map((d) => ({
-              date: new Date(d.date + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }),
-              e1rm: d.e1rm,
-            }))
-            return (
-              <div key={id} className="rounded-[20px] p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div className="flex justify-between items-baseline mb-4">
-                  <div>
-                    <p className="text-sm font-bold text-white">{ex?.name}</p>
-                    {latest && <p className="text-xs text-white/30 mt-0.5">{latest} kg e1RM</p>}
-                  </div>
-                  {gained !== null && (
-                    <p className="text-xs font-bold text-green-400">+{gained} kg</p>
-                  )}
-                </div>
-                {chartData.length > 1 ? (
-                  <ResponsiveContainer width="100%" height={110}>
-                    <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                      <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 10 }} tickLine={false} axisLine={false} />
-                      <YAxis tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 10 }} tickLine={false} axisLine={false} />
-                      <Tooltip content={<Tip />} />
-                      <Line type="monotone" dataKey="e1rm" stroke="#f97316" strokeWidth={2}
-                        dot={{ fill: '#f97316', r: 3, strokeWidth: 0 }}
-                        activeDot={{ r: 5, fill: '#f97316', stroke: 'rgba(249,115,22,0.3)', strokeWidth: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-xs text-white/25 py-4 text-center">Log 2+ sessions to see trend</p>
-                )}
+      {KEY_LIFTS.filter(id => (strengthData[id]?.length ?? 0) > 0).map(id => {
+        const ex = exerciseLibrary.find(e => e.id === id)
+        const data = strengthData[id] ?? []
+        const latest = data.at(-1)?.e1rm
+        const first = data[0]?.e1rm
+        const gained = latest && first && latest > first ? +(latest - first).toFixed(1) : null
+        const chartData = data.map(d => ({ date: fmtShort(d.date), e1rm: d.e1rm }))
+        return (
+          <div key={id} style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{ex?.name}</p>
+                {latest && <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>{latest} kg e1RM</p>}
               </div>
-            )
-          })}
-        </div>
-      )}
-
+              {gained !== null && <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>+{gained} kg</p>}
+            </div>
+            {chartData.length > 1 ? (
+              <div className="card" style={{ padding: '16px 12px 8px' }}>
+                <ResponsiveContainer width="100%" height={100}>
+                  <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                    <XAxis dataKey="date" tick={{ fill: 'var(--text-3)', fontSize: 10 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill: 'var(--text-3)', fontSize: 10 }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTip />} />
+                    <Line type="monotone" dataKey="e1rm" stroke="var(--accent)" strokeWidth={2} dot={{ fill: 'var(--accent)', r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p style={{ fontSize: 12, color: 'var(--text-3)', padding: '12px 0' }}>Log 2+ sessions to see trend</p>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

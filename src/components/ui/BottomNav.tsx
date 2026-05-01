@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom'
 import { Home, Dumbbell, Salad, TrendingUp, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 const nav = [
   { to: '/',          icon: Home,       label: 'Home'     },
@@ -15,39 +14,31 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        background: 'rgba(8,8,14,0.96)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
+        background: 'rgba(13,13,19,0.97)',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
       }}
     >
       <div className="max-w-md mx-auto flex pb-safe">
         {nav.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className="flex-1 flex flex-col items-center justify-center py-3 gap-1 transition-all duration-150"
-          >
+          <NavLink key={to} to={to} end={to === '/'} className="flex-1">
             {({ isActive }) => (
-              <>
+              <div className="flex flex-col items-center justify-center py-3 gap-1">
                 <Icon
                   size={22}
-                  strokeWidth={isActive ? 2.5 : 1.6}
-                  className={cn(
-                    'transition-all duration-150',
-                    isActive ? 'text-white' : 'text-white/22'
-                  )}
+                  strokeWidth={isActive ? 2.5 : 1.5}
+                  color={isActive ? '#E9A020' : 'rgba(255,255,255,0.22)'}
                 />
                 <span
-                  className={cn(
-                    'text-[10px] font-semibold tracking-wide transition-all duration-150',
-                    isActive ? 'text-amber-400' : 'text-white/18'
-                  )}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    color: isActive ? '#E9A020' : 'rgba(255,255,255,0.2)',
+                  }}
                 >
                   {label}
                 </span>
-              </>
+              </div>
             )}
           </NavLink>
         ))}

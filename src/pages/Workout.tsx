@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle, Clock, Activity, ArrowRight, Dumbbell, Wind } from 'lucide-react'
+import { CheckCircle, Clock, Activity, ArrowRight, Wind, Check } from 'lucide-react'
 import ExerciseCard from '@/components/workout/ExerciseCard'
 import { getProgramDayByDOW } from '@/lib/programs/upperLowerSplit'
 import { getExerciseById } from '@/lib/programs/exerciseLibrary'
@@ -20,63 +20,41 @@ interface SessionExercise {
 }
 
 const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const TRAINING_DAYS = new Set([0, 1, 3, 5, 6]) // Sun, Mon, Wed, Fri, Sat
+const TRAINING_DAYS = new Set([0, 1, 3, 5, 6])
 
-function WeekCalendar({
-  todayDOW,
-  selectedDOW,
-  onSelect,
-}: {
-  todayDOW: number
-  selectedDOW: number
-  onSelect: (dow: number) => void
+function WeekCalendar({ todayDOW, selectedDOW, onSelect }: {
+  todayDOW: number; selectedDOW: number; onSelect: (dow: number) => void
 }) {
-  // Build Mon–Sun week starting from this Monday
-  const days = Array.from({ length: 7 }, (_, i) => (i + 1) % 7) // Mon=1,Tue=2,...,Sun=0
-
+  const days = Array.from({ length: 7 }, (_, i) => (i + 1) % 7)
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+    <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }} className="scrollbar-hide">
       {days.map((dow) => {
-        const isToday = dow === todayDOW
+        const isToday    = dow === todayDOW
         const isSelected = dow === selectedDOW
-        const isTrain = TRAINING_DAYS.has(dow)
-
-        // Get date offset for display
+        const isTrain    = TRAINING_DAYS.has(dow)
         let diff = dow - todayDOW
         if (diff < -3) diff += 7
         if (diff > 3) diff -= 7
-        const dateStr = getDateOffset(diff)
-        const dayNum = new Date(dateStr + 'T12:00:00').getDate()
-
+        const dayNum = new Date(getDateOffset(diff) + 'T12:00:00').getDate()
         return (
           <button
             key={dow}
             onClick={() => onSelect(dow)}
-            className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-2xl transition-all shrink-0 active:scale-95"
             style={{
-              background: isSelected
-                ? 'linear-gradient(135deg, #f59e0b, #f97316)'
-                : isToday
-                ? 'rgba(249,115,22,0.12)'
-                : 'rgba(255,255,255,0.04)',
-              border: isSelected
-                ? '1px solid transparent'
-                : isToday
-                ? '1px solid rgba(249,115,22,0.25)'
-                : '1px solid rgba(255,255,255,0.07)',
-              boxShadow: isSelected ? '0 0 14px rgba(249,115,22,0.3)' : 'none',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              padding: '10px 12px', borderRadius: 14, flexShrink: 0,
+              background: isSelected ? 'var(--accent)' : isToday ? 'rgba(233,160,32,0.1)' : 'var(--surface)',
+              border: `1px solid ${isSelected ? 'transparent' : isToday ? 'rgba(233,160,32,0.25)' : 'var(--border)'}`,
+              transition: 'all 0.15s',
             }}
           >
-            <span className="text-[10px] font-semibold uppercase tracking-wide"
-              style={{ color: isSelected ? 'white' : 'rgba(255,255,255,0.4)' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: isSelected ? '#000' : 'var(--text-2)' }}>
               {DOW_LABELS[dow]}
             </span>
-            <span className="text-base font-black"
-              style={{ color: isSelected ? 'white' : isToday ? '#fbbf24' : 'rgba(255,255,255,0.8)' }}>
+            <span style={{ fontSize: 17, fontWeight: 800, color: isSelected ? '#000' : isToday ? 'var(--accent)' : 'var(--text)', lineHeight: 1 }}>
               {dayNum}
             </span>
-            <div className="w-1 h-1 rounded-full"
-              style={{ background: isTrain ? (isSelected ? 'white' : '#f59e0b') : 'rgba(255,255,255,0.2)' }} />
+            <div style={{ width: 4, height: 4, borderRadius: '50%', background: isTrain ? (isSelected ? '#000' : 'var(--accent)') : 'transparent' }} />
           </button>
         )
       })}
@@ -87,16 +65,16 @@ function WeekCalendar({
 export default function Workout() {
   const navigate = useNavigate()
   const todayDOW = getDayOfWeek()
-  const [selectedDOW, setSelectedDOW] = useState(todayDOW)
-  const [exercises, setExercises] = useState<SessionExercise[]>([])
-  const [activeIdx, setActiveIdx] = useState(0)
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [startTime] = useState(Date.now())
-  const [elapsed, setElapsed] = useState(0)
-  const [saving, setSaving] = useState(false)
-  const [done, setDone] = useState(false)
+  const [selectedDOW, setSelectedDOW]   = useState(todayDOW)
+  const [exercises, setExercises]       = useState<SessionExercise[]>([])
+  const [activeIdx, setActiveIdx]       = useState(0)
+  const [sessionId, setSessionId]       = useState<string | null>(null)
+  const [startTime]                     = useState(Date.now())
+  const [elapsed, setElapsed]           = useState(0)
+  const [saving, setSaving]             = useState(false)
+  const [done, setDone]                 = useState(false)
 
-  const isViewingToday = selectedDOW === todayDOW
+  const isViewingToday  = selectedDOW === todayDOW
   const programDay: ProgramDayTemplate | null = getProgramDayByDOW(selectedDOW)
   const isSelectedRestDay = !TRAINING_DAYS.has(selectedDOW)
 
@@ -112,7 +90,6 @@ export default function Workout() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Find or create today's session first so we can restore completed sets
       let sid: string | null = null
       const { data: existing } = await supabase
         .from('workout_sessions').select('id').eq('user_id', user.id).eq('date', today()).maybeSingle()
@@ -128,7 +105,6 @@ export default function Workout() {
       }
       setSessionId(sid)
 
-      // Fetch already-logged sets for this session so we can restore them
       const todaysLogs: Record<string, { set_number: number; weight_kg: number; reps_completed: number; rpe: number }[]> = {}
       if (sid) {
         const { data: logs } = await supabase
@@ -138,12 +114,7 @@ export default function Workout() {
         if (logs) {
           for (const log of logs) {
             if (!todaysLogs[log.exercise_id]) todaysLogs[log.exercise_id] = []
-            todaysLogs[log.exercise_id].push({
-              set_number: log.set_number,
-              weight_kg: log.weight_kg,
-              reps_completed: log.reps_completed,
-              rpe: log.rpe ?? 7,
-            })
+            todaysLogs[log.exercise_id].push({ set_number: log.set_number, weight_kg: log.weight_kg, reps_completed: log.reps_completed, rpe: log.rpe ?? 7 })
           }
         }
       }
@@ -169,25 +140,22 @@ export default function Workout() {
             groupedHistory.push(...Object.values(bySession).slice(0, 3))
           }
 
-          const lastSession = groupedHistory[groupedHistory.length - 1]
-          const lastWeight = lastSession?.[0]?.weight_kg
-          const rec = getWeightRecommendation(groupedHistory, tmpl.sets, tmpl.target_reps_min, tmpl.exercise_type)
+          const lastSession  = groupedHistory[groupedHistory.length - 1]
+          const lastWeight   = lastSession?.[0]?.weight_kg
+          const rec          = getWeightRecommendation(groupedHistory, tmpl.sets, tmpl.target_reps_min, tmpl.exercise_type)
           const suggestedWeight = rec?.recommended_weight_kg ?? (tmpl.exercise_type === 'lower_compound' ? 40 : 20)
-
-          const completedSets = todaysLogs[tmpl.exercise_id] ?? []
+          const completedSets   = todaysLogs[tmpl.exercise_id] ?? []
           return { template: tmpl, exercise, suggestedWeight, lastWeight, progressDirection: rec?.direction, completedSets }
         })
       )
 
       setExercises(loaded)
-      // Resume at the first exercise that still has sets remaining
       const firstIncomplete = loaded.findIndex((e) => e.completedSets.length < e.template.sets)
       setActiveIdx(firstIncomplete === -1 ? 0 : firstIncomplete)
     }
     init()
   }, [selectedDOW])
 
-  // Save a single set to Supabase the instant it's logged
   const handleSetLogged = useCallback(async (
     exIdx: number,
     set: { set_number: number; weight_kg: number; reps_completed: number; rpe: number }
@@ -195,31 +163,19 @@ export default function Workout() {
     if (!sessionId || !programDay) return
     const tmpl = programDay.exercises[exIdx]
     if (!tmpl) return
-    await supabase.from('exercise_logs').insert({
-      session_id: sessionId,
-      exercise_id: tmpl.exercise_id,
-      ...set,
-      skipped: false,
-    })
+    await supabase.from('exercise_logs').insert({ session_id: sessionId, exercise_id: tmpl.exercise_id, ...set, skipped: false })
   }, [sessionId, programDay])
 
-  // Delete a single set from Supabase when it's undone
   const handleSetUnlogged = useCallback(async (exIdx: number, setNumber: number) => {
     if (!sessionId || !programDay) return
     const tmpl = programDay.exercises[exIdx]
     if (!tmpl) return
-    await supabase.from('exercise_logs')
-      .delete()
-      .eq('session_id', sessionId)
-      .eq('exercise_id', tmpl.exercise_id)
-      .eq('set_number', setNumber)
-    // Update parent state — remove that set so progress bar stays accurate
+    await supabase.from('exercise_logs').delete().eq('session_id', sessionId).eq('exercise_id', tmpl.exercise_id).eq('set_number', setNumber)
     setExercises((prev) => prev.map((e, i) =>
       i === exIdx ? { ...e, completedSets: e.completedSets.filter((s) => s.set_number !== setNumber) } : e
     ))
   }, [sessionId, programDay])
 
-  // All sets already saved per-set — just update UI state here
   const handleSetsComplete = useCallback((
     exIdx: number,
     sets: { set_number: number; weight_kg: number; reps_completed: number; rpe: number }[]
@@ -232,9 +188,7 @@ export default function Workout() {
   async function finishWorkout() {
     if (!sessionId) return
     setSaving(true)
-    await supabase.from('workout_sessions')
-      .update({ completed: true, ended_at: new Date().toISOString() })
-      .eq('id', sessionId)
+    await supabase.from('workout_sessions').update({ completed: true, ended_at: new Date().toISOString() }).eq('id', sessionId)
     setSaving(false)
     setDone(true)
   }
@@ -242,32 +196,37 @@ export default function Workout() {
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0')
   const ss = String(elapsed % 60).padStart(2, '0')
   const allExercisesDone = exercises.length > 0 && exercises.every((e) => e.completedSets.length >= e.template.sets)
+  const completedCount   = exercises.filter(e => e.completedSets.length >= e.template.sets).length
 
+  /* ── Done screen ── */
   if (done) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-6 max-w-md mx-auto animate-slide-up">
-        <div className="w-28 h-28 rounded-full flex items-center justify-center"
-          style={{ background: 'radial-gradient(circle, rgba(34,197,94,0.18) 0%, rgba(34,197,94,0.04) 70%)', border: '1px solid rgba(34,197,94,0.2)' }}>
-          <CheckCircle size={52} className="text-green-400" />
+      <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px', gap: 32, maxWidth: 448, margin: '0 auto' }}>
+        <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--green-dim)', border: '1px solid rgba(24,200,122,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CheckCircle size={40} color="var(--green)" />
         </div>
-        <div className="text-center">
-          <h1 className="text-3xl font-black text-white">Session Complete</h1>
-          <p className="text-white/40 mt-2 text-sm">{mm}:{ss} · {exercises.length} exercises · progressive overload saved</p>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 8 }}>Session complete.</h1>
+          <p style={{ fontSize: 14, color: 'var(--text-2)' }}>{mm}:{ss} · {exercises.length} exercises · overload logged</p>
         </div>
-        <div className="w-full glass rounded-2xl p-4 text-center"
-          style={{ borderColor: 'rgba(59,130,246,0.2)', background: 'rgba(59,130,246,0.05)' }}>
-          <p className="text-sm font-bold text-blue-300">Zone 2 Finisher</p>
-          <p className="text-xs text-white/40 mt-1">{programDay?.cardio_duration_min} min at 110–128 bpm · bike or treadmill</p>
+        <div className="card" style={{ padding: '16px 20px', width: '100%', textAlign: 'center' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', marginBottom: 4 }}>Zone 2 finisher</p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)' }}>{programDay?.cardio_duration_min} min at 110–128 bpm · bike or treadmill</p>
         </div>
-        <div className="flex gap-3 w-full">
-          <button onClick={() => navigate('/cardio')}
-            className="flex-1 py-4 rounded-2xl font-bold text-blue-300 glass flex items-center justify-center gap-2 active:scale-95 text-sm transition-all">
-            <Activity size={16} /> Cardio
+        <div style={{ display: 'flex', gap: 12, width: '100%' }}>
+          <button
+            onClick={() => navigate('/cardio')}
+            className="btn-ghost"
+            style={{ flex: 1, height: 52, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          >
+            <Activity size={15} /> Log cardio
           </button>
-          <button onClick={() => navigate('/')}
-            className="flex-1 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 glow-brand-sm active:scale-95 transition-all text-sm"
-            style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-            Home <ArrowRight size={16} />
+          <button
+            onClick={() => navigate('/')}
+            className="btn-primary"
+            style={{ flex: 1, height: 52, fontSize: 14 }}
+          >
+            Done <ArrowRight size={15} />
           </button>
         </div>
       </div>
@@ -275,114 +234,107 @@ export default function Workout() {
   }
 
   return (
-    <div className="px-5 pt-12 pb-page max-w-md mx-auto space-y-4">
+    <div style={{ padding: '52px 20px 0', maxWidth: 448, margin: '0 auto' }} className="pb-page">
+
       {/* Header */}
-      <div className="flex items-start justify-between mb-1">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <p className="text-[11px] font-bold text-white/25 uppercase tracking-widest mb-2">Training</p>
-          <h1 className="text-4xl font-black text-white tracking-tight">Train</h1>
+          <p className="label" style={{ marginBottom: 8 }}>Training</p>
+          <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', lineHeight: 1 }}>Train</h1>
         </div>
         {isViewingToday && programDay && programDay.exercises.length > 0 && (
-          <div className="rounded-2xl px-3 py-2 flex items-center gap-2"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <Clock size={12} className="text-white/40" />
-            <span className="text-sm font-mono font-bold text-white tabular-nums">{mm}:{ss}</span>
+          <div className="card" style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Clock size={12} color="var(--text-3)" />
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>{mm}:{ss}</span>
           </div>
         )}
       </div>
 
       {/* Week calendar */}
-      <WeekCalendar todayDOW={todayDOW} selectedDOW={selectedDOW} onSelect={setSelectedDOW} />
+      <div style={{ marginBottom: 28 }}>
+        <WeekCalendar todayDOW={todayDOW} selectedDOW={selectedDOW} onSelect={setSelectedDOW} />
+      </div>
 
-      {/* Day preview label */}
+      {/* Preview banner */}
       {!isViewingToday && (
-        <div className="glass rounded-2xl px-4 py-2.5 flex items-center justify-between"
-          style={{ borderColor: 'rgba(249,115,22,0.2)', background: 'rgba(249,115,22,0.05)' }}>
-          <span className="text-xs text-amber-400 font-semibold">Previewing {DOW_LABELS[selectedDOW]}'s session</span>
-          <button onClick={() => setSelectedDOW(todayDOW)}
-            className="text-xs text-white/40 hover:text-white transition-colors">Back to today</button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderRadius: 12, background: 'var(--accent-dim)', border: '1px solid rgba(233,160,32,0.2)', marginBottom: 20 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>Previewing {DOW_LABELS[selectedDOW]}</span>
+          <button onClick={() => setSelectedDOW(todayDOW)} style={{ fontSize: 12, color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer' }}>
+            Back to today
+          </button>
         </div>
       )}
 
       {/* Rest day */}
       {isSelectedRestDay ? (
-        <div className="glass rounded-3xl p-6 text-center space-y-3"
-          style={{ borderColor: 'rgba(59,130,246,0.15)', background: 'rgba(59,130,246,0.04)' }}>
-          <div className="text-4xl">🚶</div>
-          <div>
-            <h2 className="text-xl font-black text-white">Rest & Walk Day</h2>
-            <p className="text-white/40 text-sm mt-1">30–45 min brisk walk at Zone 2 pace</p>
-            <p className="text-xs text-white/20 mt-2">Muscles grow during recovery. This day is doing the work.</p>
-          </div>
+        <div className="card" style={{ padding: 24, textAlign: 'center' }}>
+          <p style={{ fontSize: 32, marginBottom: 12 }}>🚶</p>
+          <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Rest &amp; Walk</p>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 20 }}>30–45 min brisk walk · Zone 2 pace</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)' }}>Muscles grow during recovery. This day is doing the work.</p>
           {isViewingToday && (
-            <button onClick={() => navigate('/cardio')}
-              className="px-6 py-3 rounded-2xl font-bold text-white glass flex items-center gap-2 mx-auto transition-all active:scale-95 text-sm"
-              style={{ borderColor: 'rgba(59,130,246,0.2)' }}>
-              <Activity size={15} className="text-blue-400" /> Log Walk
+            <button onClick={() => navigate('/cardio')} className="btn-ghost" style={{ marginTop: 20, padding: '12px 24px', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+              <Activity size={14} /> Log walk
             </button>
           )}
         </div>
+
       ) : !programDay ? null : programDay.exercises.length === 0 ? (
-        /* VO2 day */
-        <div className="glass rounded-3xl p-6 text-center space-y-3"
-          style={{ borderColor: 'rgba(239,68,68,0.15)', background: 'rgba(239,68,68,0.04)' }}>
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto"
-            style={{ background: 'rgba(239,68,68,0.15)' }}>
-            <Wind size={28} className="text-red-400" />
+        /* VO2 Max day */
+        <div className="card" style={{ padding: 24, textAlign: 'center' }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(224,84,84,0.1)', border: '1px solid rgba(224,84,84,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Wind size={24} color="var(--red)" />
           </div>
-          <div>
-            <h2 className="text-xl font-black text-white">VO₂ Max Day</h2>
-            <p className="text-white/40 text-sm mt-1">Norwegian 4×4 or 40 min Zone 2</p>
-            <p className="text-xs text-white/20 mt-2">The session that raises your ceiling</p>
-          </div>
+          <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>VO₂ Max Day</p>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 8 }}>Norwegian 4×4 or 40 min Zone 2</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 24 }}>The session that raises your ceiling</p>
           {isViewingToday && (
-            <button onClick={() => navigate('/cardio')}
-              className="px-6 py-3 rounded-2xl font-bold text-white flex items-center gap-2 mx-auto glow-brand-sm transition-all active:scale-95 text-sm"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-              Start Session <ArrowRight size={15} />
+            <button onClick={() => navigate('/cardio')} className="btn-primary" style={{ padding: '14px 28px', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              Start session <ArrowRight size={15} />
             </button>
           )}
         </div>
+
       ) : (
         /* Lifting day */
         <>
-          {/* Focus card */}
-          <div className="glass rounded-3xl p-5"
-            style={{ borderColor: 'rgba(249,115,22,0.2)', background: 'rgba(249,115,22,0.04)' }}>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-                <Dumbbell size={13} className="text-white" strokeWidth={2.5} />
-              </div>
-              <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
-                {isViewingToday ? "Today's Session" : DOW_LABELS[selectedDOW]}
-              </span>
-            </div>
-            <h2 className="text-xl font-black text-white">{programDay.focus_label}</h2>
-            <p className="text-white/40 text-sm mt-1">
-              {programDay.exercises.length} exercises · {programDay.cardio_duration_min} min Zone 2 finisher
+          {/* Session header */}
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 6 }}>{programDay.focus_label}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              {programDay.exercises.length} exercises · {programDay.cardio_duration_min} min Zone 2 after
             </p>
 
-            {/* Exercise progress bar */}
+            {/* Progress dots */}
             {isViewingToday && exercises.length > 0 && (
-              <div className="flex gap-1.5 mt-4">
+              <div style={{ display: 'flex', gap: 6, marginTop: 16 }}>
                 {exercises.map((e, i) => (
-                  <div key={i} className="h-1 flex-1 rounded-full transition-all duration-500"
+                  <div
+                    key={i}
                     style={{
+                      height: 3, flex: 1, borderRadius: 2,
                       background: e.completedSets.length >= e.template.sets
-                        ? '#22c55e'
-                        : i === activeIdx
-                        ? 'rgba(249,115,22,0.5)'
-                        : 'rgba(255,255,255,0.08)',
-                    }} />
+                        ? 'var(--green)'
+                        : i === activeIdx ? 'rgba(233,160,32,0.6)' : 'rgba(255,255,255,0.08)',
+                      transition: 'background 0.3s',
+                    }}
+                  />
                 ))}
               </div>
             )}
+            {isViewingToday && exercises.length > 0 && (
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>
+                {completedCount} of {exercises.length} exercises done
+              </p>
+            )}
           </div>
 
-          {/* Exercise list — only active for today */}
+          {/* Divider */}
+          <div className="divider" style={{ marginBottom: 4 }} />
+
+          {/* Exercise list */}
           {isViewingToday && exercises.length > 0 ? (
-            <div className="space-y-3">
+            <div>
               {exercises.map((ex, i) => (
                 <ExerciseCard
                   key={ex.template.exercise_id}
@@ -397,23 +349,24 @@ export default function Workout() {
                   onSetsComplete={(sets) => handleSetsComplete(i, sets)}
                   onSetLogged={(set) => handleSetLogged(i, set)}
                   onSetUnlogged={(setNum) => handleSetUnlogged(i, setNum)}
-                  onUncomplete={() => {/* state already fixed by handleSetUnlogged */}}
+                  onUncomplete={() => {/* handled by handleSetUnlogged */}}
                 />
               ))}
             </div>
           ) : (
-            /* Preview mode — show exercise list read-only */
-            <div className="space-y-2">
+            /* Preview mode */
+            <div>
               {programDay.exercises.map((tmpl, i) => {
                 const ex = getExerciseById(tmpl.exercise_id)
                 return (
-                  <div key={tmpl.exercise_id} className="glass rounded-2xl px-4 py-3 flex items-center gap-3">
-                    <span className="text-xs font-bold text-white/30 w-5 text-center">{i + 1}</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-white">{ex?.name ?? tmpl.exercise_id}</p>
-                      <p className="text-xs text-white/30">
-                        {tmpl.sets} × {tmpl.target_reps_min}–{tmpl.target_reps_max} reps
-                      </p>
+                  <div
+                    key={tmpl.exercise_id}
+                    style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', borderBottom: '1px solid var(--border)' }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)', width: 20, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
+                    <div>
+                      <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{ex?.name ?? tmpl.exercise_id}</p>
+                      <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>{tmpl.sets} × {tmpl.target_reps_min}–{tmpl.target_reps_max} reps</p>
                     </div>
                   </div>
                 )
@@ -421,15 +374,11 @@ export default function Workout() {
             </div>
           )}
 
-          {/* Cardio reminder */}
-          <div className="glass rounded-2xl p-4 flex items-center gap-3"
-            style={{ borderColor: 'rgba(59,130,246,0.15)', background: 'rgba(59,130,246,0.04)' }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: 'rgba(59,130,246,0.15)' }}>
-              <Activity size={16} className="text-blue-400" />
-            </div>
-            <p className="text-sm text-white/60">
-              <span className="font-semibold text-blue-300">After lifting:</span> {programDay.cardio_duration_min} min Zone 2 · 110–128 bpm
+          {/* Zone 2 reminder */}
+          <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, marginTop: 24 }}>
+            <Activity size={16} color="var(--text-3)" />
+            <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text)' }}>After lifting:</span> {programDay.cardio_duration_min} min Zone 2 · 110–128 bpm
             </p>
           </div>
 
@@ -438,10 +387,11 @@ export default function Workout() {
             <button
               onClick={finishWorkout}
               disabled={saving}
-              className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 glow-brand-sm transition-all active:scale-95 disabled:opacity-40"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-              <CheckCircle size={18} />
-              {saving ? 'Saving…' : 'Finish Workout'}
+              className="btn-primary"
+              style={{ width: '100%', height: 56, fontSize: 16, marginTop: 16 }}
+            >
+              <Check size={18} strokeWidth={2.5} />
+              {saving ? 'Saving…' : 'Finish workout'}
             </button>
           )}
         </>

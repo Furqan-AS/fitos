@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface RestTimerProps {
   seconds: number
@@ -26,47 +25,57 @@ export default function RestTimer({ seconds, onComplete, onDismiss }: RestTimerP
     return () => clearInterval(intervalRef.current!)
   }, [onComplete])
 
-  const pct = (remaining / seconds) * 100
-  const circumference = 2 * Math.PI * 44
-  const dashOffset = circumference * (1 - pct / 100)
+  const pct = remaining / seconds
+  const r = 54
+  const circ = 2 * Math.PI * r
+  const offset = circ * (1 - pct)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
-      <div className="flex flex-col items-center gap-6 p-8">
-        <p className="text-slate-400 text-sm font-medium uppercase tracking-widest">Rest</p>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      background: 'rgba(13,13,19,0.97)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 32,
+    }}>
+      <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+        Rest
+      </p>
 
-        <div className="relative w-36 h-36">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="44" fill="none" stroke="#1e293b" strokeWidth="8" />
-            <circle
-              cx="50" cy="50" r="44" fill="none"
-              stroke="#22c55e" strokeWidth="8" strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={dashOffset}
-              style={{ transition: 'stroke-dashoffset 1s linear' }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span
-              className={cn(
-                'text-4xl font-bold tabular-nums',
-                remaining <= 10 ? 'text-amber-400' : 'text-white'
-              )}
-            >
-              {remaining}
-            </span>
-          </div>
+      {/* Ring */}
+      <div style={{ position: 'relative', width: 160, height: 160 }}>
+        <svg width="160" height="160" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="80" cy="80" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+          <circle
+            cx="80" cy="80" r={r} fill="none"
+            stroke={remaining <= 10 ? 'var(--accent)' : 'var(--green)'}
+            strokeWidth="6" strokeLinecap="round"
+            strokeDasharray={circ}
+            strokeDashoffset={offset}
+            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s' }}
+          />
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{
+            fontSize: 52, fontWeight: 900, letterSpacing: '-0.04em',
+            color: remaining <= 10 ? 'var(--accent)' : 'var(--text)',
+            fontVariantNumeric: 'tabular-nums', lineHeight: 1,
+            transition: 'color 0.3s',
+          }}>
+            {remaining}
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>seconds</p>
         </div>
-
-        <p className="text-slate-500 text-sm">Next set in {remaining}s</p>
-
-        <button
-          onClick={onDismiss}
-          className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors"
-        >
-          <X size={14} /> Skip rest
-        </button>
       </div>
+
+      <p style={{ fontSize: 15, color: 'var(--text-2)' }}>Next set ready soon</p>
+
+      <button
+        onClick={onDismiss}
+        className="btn-ghost"
+        style={{ padding: '12px 28px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}
+      >
+        <X size={14} />
+        Skip rest
+      </button>
     </div>
   )
 }

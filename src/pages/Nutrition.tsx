@@ -1,105 +1,85 @@
 import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 
-interface Food {
-  name: string
-  serving: string
-  grams: number
-  cal: number
-  protein: number
-  carbs: number
-  fat: number
-  note: string
-}
-
-interface Category {
-  id: string
-  label: string
-  accent: string
-  foods: Food[]
-}
+interface Food { name: string; serving: string; grams: number; cal: number; protein: number; carbs: number; fat: number; note: string }
+interface Category { id: string; label: string; color: string; foods: Food[] }
 
 const CATEGORIES: Category[] = [
   {
-    id: 'protein',
-    label: 'Protein',
-    accent: '#22c55e',
+    id: 'protein', label: 'Protein', color: 'var(--green)',
     foods: [
       { name: 'Chicken Breast', serving: '1 large breast', grams: 200, cal: 330, protein: 62, carbs: 0, fat: 7, note: 'Grilled or boiled. Best protein-to-calorie ratio in your budget.' },
       { name: 'Tuna (tin, drained)', serving: '1 tin', grams: 130, cal: 151, protein: 34, carbs: 0, fat: 1, note: 'Best gram-for-gram protein source. Keep 4 tins a week.' },
-      { name: 'Eggs', serving: '2 whole', grams: 120, cal: 186, protein: 16, carbs: 1, fat: 13, note: 'Complete amino acid profile. Add a third if still hungry.' },
-      { name: 'Lamb / Mutton (karahi)', serving: '1 cup', grams: 150, cal: 387, protein: 39, carbs: 0, fat: 26, note: 'High fat from cooking oil adds extra. Limit to 2–3×/week.' },
+      { name: 'Eggs', serving: '2 whole', grams: 120, cal: 186, protein: 16, carbs: 1, fat: 13, note: 'Complete amino acids. Add a third egg if still hungry.' },
+      { name: 'Lamb / Mutton (karahi)', serving: '1 cup', grams: 150, cal: 387, protein: 39, carbs: 0, fat: 26, note: 'High fat from cooking oil. Limit to 2–3×/week.' },
       { name: 'Daal Masoor (cooked)', serving: '1 bowl', grams: 250, cal: 290, protein: 23, carbs: 50, fat: 1, note: 'Great fibre + protein. Counts toward carbs too.' },
       { name: 'Greek Yogurt (full fat)', serving: '1 cup', grams: 200, cal: 194, protein: 18, carbs: 8, fat: 10, note: 'Use as raita. 18g protein per cup.' },
-      { name: 'Whey Protein (1 scoop)', serving: '1 scoop', grams: 35, cal: 130, protein: 25, carbs: 5, fat: 2, note: 'Post-workout. Fastest way to hit 180g daily protein.' },
+      { name: 'Whey Protein', serving: '1 scoop', grams: 35, cal: 130, protein: 25, carbs: 5, fat: 2, note: 'Post-workout. Fastest way to hit 180g daily protein.' },
     ],
   },
   {
-    id: 'carbs',
-    label: 'Carbs',
-    accent: '#3b82f6',
+    id: 'carbs', label: 'Carbs', color: '#5B8AF0',
     foods: [
-      { name: 'Basmati Rice (cooked)', serving: '1 cup', grams: 180, cal: 234, protein: 5, carbs: 50, fat: 1, note: 'Daily max ≈ 1–1.5 cups. 1 cup uses a quarter of your carb budget.' },
+      { name: 'Basmati Rice (cooked)', serving: '1 cup', grams: 180, cal: 234, protein: 5, carbs: 50, fat: 1, note: 'Daily max ≈ 1–1.5 cups. 1 cup = 50g carbs.' },
       { name: 'Whole Wheat Roti', serving: '1 medium', grams: 40, cal: 106, protein: 3, carbs: 21, fat: 1, note: 'Max 2 rotis/day. Not both roti AND rice.' },
-      { name: 'Oats (dry)', serving: '½ cup', grams: 50, cal: 195, protein: 9, carbs: 33, fat: 4, note: 'Slow-digesting. Best pre-gym carb if you eat before training.' },
-      { name: 'Chickpeas / Chana (cooked)', serving: '1 cup', grams: 200, cal: 328, protein: 18, carbs: 54, fat: 5, note: 'High fibre — keeps you full. Counts as protein too.' },
-      { name: 'Sweet Potato (baked)', serving: '1 medium', grams: 150, cal: 129, protein: 3, carbs: 30, fat: 0, note: 'Cleaner carb than white rice. Great with karahi.' },
+      { name: 'Oats (dry)', serving: '½ cup', grams: 50, cal: 195, protein: 9, carbs: 33, fat: 4, note: 'Slow-digesting. Best pre-gym carb.' },
+      { name: 'Chickpeas / Chana (cooked)', serving: '1 cup', grams: 200, cal: 328, protein: 18, carbs: 54, fat: 5, note: 'High fibre. Counts as protein too.' },
+      { name: 'Sweet Potato', serving: '1 medium', grams: 150, cal: 129, protein: 3, carbs: 30, fat: 0, note: 'Cleaner carb than white rice. Great with karahi.' },
     ],
   },
   {
-    id: 'fats',
-    label: 'Fats',
-    accent: '#f59e0b',
+    id: 'fats', label: 'Fats', color: 'var(--accent)',
     foods: [
       { name: 'Olive Oil', serving: '1 tablespoon', grams: 14, cal: 124, protein: 0, carbs: 0, fat: 14, note: 'Use ½ tbsp per dish. 1 tbsp = 124 kcal — adds up fast.' },
-      { name: 'Ghee / Butter', serving: '1 teaspoon', grams: 5, cal: 45, protein: 0, carbs: 0, fat: 5, note: 'Daal with 1 tsp ghee is fine. No ladlefuls.' },
-      { name: 'Cooking Oil (any)', serving: '1 tablespoon', grams: 14, cal: 124, protein: 0, carbs: 0, fat: 14, note: 'The silent budget killer. Restaurant meals use 3–5 tbsp invisibly.' },
-      { name: 'Almonds', serving: '1 small handful', grams: 28, cal: 164, protein: 6, carbs: 6, fat: 14, note: 'Good snack. Don\'t eat by the bag — 164 kcal for 28g.' },
+      { name: 'Ghee', serving: '1 teaspoon', grams: 5, cal: 45, protein: 0, carbs: 0, fat: 5, note: '1 tsp on daal is fine. No ladlefuls.' },
+      { name: 'Cooking Oil (any)', serving: '1 tablespoon', grams: 14, cal: 124, protein: 0, carbs: 0, fat: 14, note: 'The silent killer. Restaurant dishes use 3–5 tbsp invisibly.' },
+      { name: 'Almonds', serving: '1 small handful', grams: 28, cal: 164, protein: 6, carbs: 6, fat: 14, note: 'Don\'t eat by the bag — 164 kcal for 28g.' },
     ],
   },
   {
-    id: 'free',
-    label: 'Eat free',
-    accent: '#a855f7',
+    id: 'free', label: 'Eat free', color: '#9B6FE8',
     foods: [
-      { name: 'Broccoli (steamed)', serving: 'Large plate', grams: 300, cal: 105, protein: 7, carbs: 21, fat: 1, note: 'Only 105 kcal for a massive plate. Eat as much as you want.' },
-      { name: 'Spinach / Saag (cooked)', serving: 'Full bowl', grams: 300, cal: 69, protein: 9, carbs: 11, fat: 1, note: '69 kcal for 300g. Iron + magnesium + basically free.' },
-      { name: 'Salad (mixed greens)', serving: 'Large bowl', grams: 200, cal: 34, protein: 3, carbs: 6, fat: 0, note: 'Zero impact on your calorie budget. Fill half the plate.' },
-      { name: 'Tomatoes', serving: '2 medium', grams: 250, cal: 45, protein: 2, carbs: 10, fat: 0, note: 'Use in curries freely. Lycopene is anti-inflammatory.' },
-      { name: 'Cucumber', serving: '1 whole', grams: 300, cal: 48, protein: 2, carbs: 11, fat: 0, note: 'Almost zero. Great volume food.' },
-      { name: 'Raita (plain yogurt)', serving: '½ cup', grams: 120, cal: 72, protein: 5, carbs: 5, fat: 4, note: 'Have with every desi meal. Protein + probiotics.' },
+      { name: 'Broccoli (steamed)', serving: 'Large plate', grams: 300, cal: 105, protein: 7, carbs: 21, fat: 1, note: 'Only 105 kcal for a massive plate. Unlimited.' },
+      { name: 'Spinach / Saag', serving: 'Full bowl', grams: 300, cal: 69, protein: 9, carbs: 11, fat: 1, note: '69 kcal for 300g. Iron + magnesium + basically free.' },
+      { name: 'Salad (mixed)', serving: 'Large bowl', grams: 200, cal: 34, protein: 3, carbs: 6, fat: 0, note: 'Zero impact on calorie budget. Fill half the plate.' },
+      { name: 'Tomatoes', serving: '2 medium', grams: 250, cal: 45, protein: 2, carbs: 10, fat: 0, note: 'Use freely in curries.' },
+      { name: 'Cucumber', serving: '1 whole', grams: 300, cal: 48, protein: 2, carbs: 11, fat: 0, note: 'Almost zero calories. Great volume food.' },
+      { name: 'Raita', serving: '½ cup', grams: 120, cal: 72, protein: 5, carbs: 5, fat: 4, note: 'Have with every desi meal.' },
     ],
   },
 ]
 
 export default function Nutrition() {
-  const [activeId, setActiveId] = useState('protein')
-  const [expandedFood, setExpandedFood] = useState<string | null>(null)
-
-  const category = CATEGORIES.find((c) => c.id === activeId)!
+  const [activeId, setActiveId]     = useState('protein')
+  const [expanded, setExpanded]     = useState<string | null>(null)
+  const category = CATEGORIES.find(c => c.id === activeId)!
 
   return (
-    <div className="pb-page max-w-md mx-auto">
+    <div style={{ maxWidth: 448, margin: '0 auto' }} className="pb-page">
 
       {/* Header */}
-      <div className="px-5 pt-12 pb-6">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-white/25">Reference</p>
-        <h1 className="text-4xl font-black text-white tracking-tight mt-2">Eat</h1>
-        <p className="text-sm text-white/35 mt-1">2,400 kcal · 180g protein · your daily targets</p>
+      <div style={{ padding: '52px 20px 24px' }}>
+        <p className="label" style={{ marginBottom: 8 }}>Reference</p>
+        <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 6 }}>Eat</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-2)' }}>2,400 kcal · 180g protein daily</p>
       </div>
 
-      {/* Daily rules — always visible, always relevant */}
-      <div className="px-5 mb-6">
-        <div className="rounded-[20px] p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* Rules */}
+      <div style={{ padding: '0 20px 28px' }}>
+        <div className="card" style={{ padding: '16px 20px' }}>
           {[
             { rule: 'Protein first.', detail: 'Hit 180g before worrying about anything else.' },
-            { rule: 'Max 2 rotis or 1.5 cups rice.', detail: 'Not both in the same day.' },
-            { rule: 'Half oil.', detail: 'Ask for it. Restaurant dishes use 3–5 tbsp invisibly.' },
-            { rule: 'Pile the vegetables.', detail: 'They cost almost nothing calorically.' },
-          ].map(({ rule, detail }) => (
-            <div key={rule} className="flex items-start gap-3">
-              <div className="w-1 h-1 rounded-full bg-amber-500 mt-2 shrink-0" />
-              <p className="text-sm text-white/55 leading-relaxed">
-                <span className="text-white font-semibold">{rule}</span>{' '}{detail}
+            { rule: 'Max 2 rotis or 1.5 cups rice.', detail: 'Not both.' },
+            { rule: 'Half oil.', detail: 'Ask every time. Restaurant dishes use 3–5 tbsp invisibly.' },
+            { rule: 'Load vegetables.', detail: 'They cost almost nothing calorically.' },
+          ].map(({ rule, detail }, i, arr) => (
+            <div
+              key={rule}
+              style={{ display: 'flex', gap: 14, padding: '10px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}
+            >
+              <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--accent)', marginTop: 8, flexShrink: 0 }} />
+              <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                <span style={{ color: 'var(--text)', fontWeight: 600 }}>{rule}</span>{' '}{detail}
               </p>
             </div>
           ))}
@@ -107,105 +87,98 @@ export default function Nutrition() {
       </div>
 
       {/* Category tabs */}
-      <div className="px-5 mb-4">
-        <div className="flex gap-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => { setActiveId(cat.id); setExpandedFood(null) }}
-              className="flex-1 py-2 rounded-xl text-xs font-bold transition-all active:scale-95"
-              style={{
-                background: activeId === cat.id ? cat.accent : 'rgba(255,255,255,0.04)',
-                color: activeId === cat.id ? 'white' : 'rgba(255,255,255,0.35)',
-                border: activeId === cat.id ? 'none' : '1px solid rgba(255,255,255,0.07)',
-              }}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
+      <div style={{ padding: '0 20px 20px', display: 'flex', gap: 8 }}>
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => { setActiveId(cat.id); setExpanded(null) }}
+            style={{
+              flex: 1, padding: '9px 4px', borderRadius: 12, fontSize: 12, fontWeight: 700,
+              background: activeId === cat.id ? cat.color : 'var(--surface)',
+              color: activeId === cat.id ? (cat.id === 'fats' ? '#000' : '#000') : 'var(--text-2)',
+              border: activeId === cat.id ? 'none' : '1px solid var(--border)',
+              transition: 'all 0.15s',
+            }}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
 
-      {/* Food list — macros always visible */}
-      <div className="px-5 space-y-2">
+      {/* Food rows */}
+      <div style={{ padding: '0 20px' }}>
         {category.foods.map((food) => {
-          const isOpen = expandedFood === food.name
+          const isOpen = expanded === food.name
           return (
-            <button
-              key={food.name}
-              onClick={() => setExpandedFood(isOpen ? null : food.name)}
-              className="w-full text-left rounded-[18px] overflow-hidden transition-all active:scale-[0.99]"
-              style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${isOpen ? `${category.accent}30` : 'rgba(255,255,255,0.06)'}` }}
-            >
-              {/* Always visible row */}
-              <div className="px-4 py-3.5 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white leading-snug">{food.name}</p>
-                  <p className="text-xs text-white/30 mt-0.5">{food.serving} · {food.grams}g</p>
+            <div key={food.name}>
+              <button
+                onClick={() => setExpanded(isOpen ? null : food.name)}
+                style={{
+                  width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center',
+                  padding: '16px 0',
+                  background: 'none', border: 'none', borderBottom: '1px solid var(--border)',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>{food.name}</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-2)' }}>{food.serving} · {food.grams}g</p>
                 </div>
-                <div className="flex items-center gap-4 shrink-0">
-                  <div className="text-right">
-                    <p className="text-sm font-black text-white tabular-nums">{food.cal}</p>
-                    <p className="text-[10px] text-white/25">kcal</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0, marginRight: 8 }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{food.cal}</p>
+                    <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>kcal</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black tabular-nums" style={{ color: category.accent }}>{food.protein}g</p>
-                    <p className="text-[10px] text-white/25">protein</p>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: 16, fontWeight: 800, color: category.color, fontVariantNumeric: 'tabular-nums' }}>{food.protein}g</p>
+                    <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>protein</p>
                   </div>
                 </div>
-              </div>
+                <ChevronDown size={15} color="var(--text-3)" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+              </button>
 
-              {/* Expanded details */}
               {isOpen && (
-                <div className="px-4 pb-4 pt-0 space-y-3 border-t border-white/5">
-                  {/* Macro grid */}
-                  <div className="grid grid-cols-3 gap-2 mt-3">
+                <div style={{ padding: '12px 0 20px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
                     {[
-                      { label: 'Carbs', value: `${food.carbs}g`, color: '#3b82f6' },
-                      { label: 'Fat',   value: `${food.fat}g`,   color: '#f59e0b' },
-                      { label: 'Per',   value: `${food.grams}g`, color: 'rgba(255,255,255,0.4)' },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} className="rounded-xl p-2.5 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                        <p className="text-sm font-black" style={{ color }}>{value}</p>
-                        <p className="text-[10px] text-white/25 mt-0.5">{label}</p>
+                      { l: 'Carbs', v: `${food.carbs}g`, c: '#5B8AF0' },
+                      { l: 'Fat',   v: `${food.fat}g`,   c: 'var(--accent)' },
+                      { l: 'Per',   v: `${food.grams}g`, c: 'var(--text-2)' },
+                    ].map(({ l, v, c }) => (
+                      <div key={l} className="card" style={{ padding: '10px', textAlign: 'center' }}>
+                        <p style={{ fontSize: 15, fontWeight: 800, color: c, fontVariantNumeric: 'tabular-nums' }}>{v}</p>
+                        <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 3 }}>{l}</p>
                       </div>
                     ))}
                   </div>
-                  {/* Budget vs daily target */}
-                  <div className="space-y-1.5">
-                    {[
-                      { label: 'Cals', used: food.cal,     of: 2400, color: 'rgba(255,255,255,0.5)' },
-                      { label: 'Protein', used: food.protein, of: 180, color: '#22c55e' },
-                      { label: 'Carbs', used: food.carbs,  of: 195, color: '#3b82f6' },
-                    ].filter(item => item.used > 0).map(({ label, used, of, color }) => (
-                      <div key={label} className="flex items-center gap-2">
-                        <span className="text-[10px] text-white/25 w-12">{label}</span>
-                        <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                          <div className="h-full rounded-full" style={{ width: `${Math.min((used / of) * 100, 100)}%`, background: color }} />
-                        </div>
-                        <span className="text-[10px] font-bold w-8 text-right" style={{ color }}>
-                          {Math.round((used / of) * 100)}%
-                        </span>
+                  {/* % of daily budget bars */}
+                  {[
+                    { l: 'Calories', used: food.cal,     of: 2400, c: 'rgba(255,255,255,0.4)' },
+                    { l: 'Protein',  used: food.protein, of: 180,  c: 'var(--green)' },
+                    { l: 'Carbs',    used: food.carbs,   of: 195,  c: '#5B8AF0' },
+                  ].filter(x => x.used > 0).map(({ l, used, of, c }) => (
+                    <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-3)', width: 52 }}>{l}</span>
+                      <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min((used / of) * 100, 100)}%`, background: c, borderRadius: 2 }} />
                       </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-white/35 leading-relaxed">{food.note}</p>
+                      <span style={{ fontSize: 11, fontWeight: 700, width: 30, textAlign: 'right', color: c }}>{Math.round((used / of) * 100)}%</span>
+                    </div>
+                  ))}
+                  <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginTop: 10 }}>{food.note}</p>
                 </div>
               )}
-            </button>
+            </div>
           )
         })}
       </div>
 
       {/* Alcohol note */}
-      <div className="px-5 mt-6">
-        <div
-          className="rounded-[20px] p-4"
-          style={{ background: 'rgba(249,115,22,0.04)', border: '1px solid rgba(249,115,22,0.12)' }}
-        >
-          <p className="text-xs font-bold text-amber-400/80 uppercase tracking-wider mb-2">Alcohol</p>
-          <p className="text-sm text-white/45 leading-relaxed">
-            6 cans = <span className="text-white font-semibold">735 kcal</span>. Three spirits + soda = <span className="text-white font-semibold">210 kcal</span>. That one switch saves ~0.13 kg/week without any other change.
+      <div style={{ padding: '28px 20px 0' }}>
+        <div className="card" style={{ padding: '16px 20px' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>Alcohol</p>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6 }}>
+            6 cans = <span style={{ color: 'var(--text)', fontWeight: 600 }}>735 kcal</span>. Three spirits + soda = <span style={{ color: 'var(--text)', fontWeight: 600 }}>210 kcal</span>. That switch alone saves ~0.13 kg/week.
           </p>
         </div>
       </div>
