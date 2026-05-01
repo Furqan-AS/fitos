@@ -3,8 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import BottomNav from '@/components/ui/BottomNav'
-import Auth from '@/pages/Auth'
-import Onboarding from '@/pages/Onboarding'
 import Dashboard from '@/pages/Dashboard'
 import Workout from '@/pages/Workout'
 import Cardio from '@/pages/Cardio'
@@ -13,24 +11,90 @@ import Progress from '@/pages/Progress'
 import Profile from '@/pages/Profile'
 import Setup from '@/pages/Setup'
 
+// Default profile values — used when auto-creating a profile for a new device
+const DEFAULT_PROFILE = {
+  name: 'Athlete',
+  age: 37,
+  gender: 'male',
+  weight_kg: 100,
+  height_cm: 180,
+  goal: 'fat_loss',
+  activity_level: 1.65,
+}
+
+function Spinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-14 h-14 rounded-2xl flex items-center justify-center animate-pulse"
+          style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
+          <span className="text-2xl font-black text-white">F</span>
+        </div>
+        <p className="text-white/30 text-sm">Loading FitOS…</p>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
-  const [hasProfile, setHasProfile] = useState<boolean | null>(null)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    if (!isSupabaseConfigured) { setSession(null); return }
-    supabase.auth.getSession().then(({ data: { session: s } }) => setSession(s))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    if (!isSupabaseConfigured) { setSession(null); setReady(true); return }
+
+    async function initAuth() {
+      // Try to restore existing session first
+      const { data: { session: existing } } = await supabase.auth.getSession()
+
+      if (existing) {
+        setSession(existing)
+        setReady(true)
+        return
+      }
+
+      // No session — sign in anonymously so the app works without any login screen.
+      // The anonymous session is persisted in localStorage and lasts until cleared.
+      const { data, error } = await supabase.auth.signInAnonymously()
+      if (error) {
+        console.error('Anonymous sign-in failed:', error.message)
+        // Fallback: app still renders, just without a user
+        setSession(null)
+      } else {
+        setSession(data.session)
+      }
+      setReady(true)
+    }
+
+    initAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s)
+    })
     return () => subscription.unsubscribe()
   }, [])
 
+  // Auto-create a default profile when the anonymous user is new
   useEffect(() => {
-    if (!session) { setHasProfile(null); return }
-    supabase.from('profiles').select('id').eq('user_id', session.user.id).maybeSingle()
-      .then(({ data }) => setHasProfile(!!data))
+    if (!session?.user) return
+    async function ensureProfile() {
+      const userId = session!.user.id
+      const { data } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (!data) {
+        await supabase.from('profiles').insert({
+          user_id: userId,
+          ...DEFAULT_PROFILE,
+        })
+      }
+    }
+    ensureProfile()
   }, [session])
 
-  // Show setup guide when Supabase isn't connected yet
   if (!isSupabaseConfigured) {
     return (
       <BrowserRouter>
@@ -41,43 +105,18 @@ function App() {
     )
   }
 
-  const previewBypass = import.meta.env.VITE_PREVIEW_BYPASS === 'true'
-
-  if (!previewBypass && (session === undefined || (session && hasProfile === null))) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center animate-pulse"
-            style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-            <span className="text-2xl font-black text-white">F</span>
-          </div>
-          <p className="text-white/30 text-sm">Loading FitOS…</p>
-        </div>
-      </div>
-    )
-  }
+  if (!ready) return <Spinner />
 
   return (
     <BrowserRouter>
       <Routes>
-        {!previewBypass && !session ? (
-          <Route path="*" element={<Auth />} />
-        ) : !previewBypass && hasProfile === false ? (
-          <>
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="*" element={<Navigate to="/onboarding" replace />} />
-          </>
-        ) : (
-          <>
-            <Route path="/"           element={<><Dashboard /><BottomNav /></>} />
-            <Route path="/workout"    element={<><Workout /><BottomNav /></>} />
-            <Route path="/cardio"     element={<><Cardio /><BottomNav /></>} />
-            <Route path="/nutrition"  element={<><Nutrition /><BottomNav /></>} />
-            <Route path="/progress"   element={<><Progress /><BottomNav /></>} />
-            <Route path="/profile"    element={<><Profile /><BottomNav /></>} />
-            <Route path="*"           element={<Navigate to="/" replace />} />
-          </>
-        )}
+        <Route path="/"           element={<><Dashboard /><BottomNav /></>} />
+        <Route path="/workout"    element={<><Workout /><BottomNav /></>} />
+        <Route path="/cardio"     element={<><Cardio /><BottomNav /></>} />
+        <Route path="/nutrition"  element={<><Nutrition /><BottomNav /></>} />
+        <Route path="/progress"   element={<><Progress /><BottomNav /></>} />
+        <Route path="/profile"    element={<><Profile /><BottomNav /></>} />
+        <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

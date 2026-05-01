@@ -187,21 +187,47 @@ export default function Workout() {
     init()
   }, [selectedDOW])
 
-  const handleSetsComplete = useCallback(async (
+  // Save a single set to Supabase the instant it's logged
+  const handleSetLogged = useCallback(async (
     exIdx: number,
-    sets: { set_number: number; weight_kg: number; reps_completed: number; rpe: number }[]
+    set: { set_number: number; weight_kg: number; reps_completed: number; rpe: number }
   ) => {
     if (!sessionId || !programDay) return
     const tmpl = programDay.exercises[exIdx]
     if (!tmpl) return
+    await supabase.from('exercise_logs').insert({
+      session_id: sessionId,
+      exercise_id: tmpl.exercise_id,
+      ...set,
+      skipped: false,
+    })
+  }, [sessionId, programDay])
 
-    await supabase.from('exercise_logs').insert(
-      sets.map((s) => ({ session_id: sessionId, exercise_id: tmpl.exercise_id, ...s, skipped: false }))
-    )
+  // Delete a single set from Supabase when it's undone
+  const handleSetUnlogged = useCallback(async (exIdx: number, setNumber: number) => {
+    if (!sessionId || !programDay) return
+    const tmpl = programDay.exercises[exIdx]
+    if (!tmpl) return
+    await supabase.from('exercise_logs')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('exercise_id', tmpl.exercise_id)
+      .eq('set_number', setNumber)
+    // Update parent state — remove that set so progress bar stays accurate
+    setExercises((prev) => prev.map((e, i) =>
+      i === exIdx ? { ...e, completedSets: e.completedSets.filter((s) => s.set_number !== setNumber) } : e
+    ))
+  }, [sessionId, programDay])
 
+  // All sets already saved per-set — just update UI state here
+  const handleSetsComplete = useCallback((
+    exIdx: number,
+    sets: { set_number: number; weight_kg: number; reps_completed: number; rpe: number }[]
+  ) => {
+    if (!programDay) return
     setExercises((prev) => prev.map((e, i) => (i === exIdx ? { ...e, completedSets: sets } : e)))
     if (exIdx < programDay.exercises.length - 1) setActiveIdx(exIdx + 1)
-  }, [sessionId, programDay])
+  }, [programDay])
 
   async function finishWorkout() {
     if (!sessionId) return
@@ -368,7 +394,9 @@ export default function Workout() {
                   isActive={i === activeIdx}
                   onActivate={() => setActiveIdx(i)}
                   onSetsComplete={(sets) => handleSetsComplete(i, sets)}
-                  onUncomplete={() => setExercises((prev) => prev.map((e, idx) => idx === i ? { ...e, completedSets: [] } : e))}
+                  onSetLogged={(set) => handleSetLogged(i, set)}
+                  onSetUnlogged={(setNum) => handleSetUnlogged(i, setNum)}
+                  onUncomplete={() => {/* state already fixed by handleSetUnlogged */}}
                 />
               ))}
             </div>

@@ -49,6 +49,8 @@ interface ExerciseCardProps {
   initialCompletedSets?: LoggedSet[]
   onSetsComplete: (sets: LoggedSet[]) => void
   onUncomplete?: () => void
+  onSetLogged?: (set: LoggedSet) => void
+  onSetUnlogged?: (setNumber: number) => void
   isActive: boolean
   onActivate: () => void
 }
@@ -62,6 +64,8 @@ export default function ExerciseCard({
   initialCompletedSets = [],
   onSetsComplete,
   onUncomplete,
+  onSetLogged,
+  onSetUnlogged,
   isActive,
   onActivate,
 }: ExerciseCardProps) {
@@ -81,6 +85,7 @@ export default function ExerciseCard({
 
   function handleSetComplete(weight: number, reps: number, rpe: number) {
     const newSet: LoggedSet = { set_number: activeSet, weight_kg: weight, reps_completed: reps, rpe }
+    onSetLogged?.(newSet)          // ← save to Supabase immediately
     const updated = [...loggedSets, newSet]
     setLoggedSets(updated)
     if (updated.length >= template.sets) {
@@ -94,9 +99,11 @@ export default function ExerciseCard({
   function handleUndo() {
     if (loggedSets.length === 0) return
     const wasAllDone = loggedSets.length >= template.sets
+    const lastSet = loggedSets[loggedSets.length - 1]
     const updated = loggedSets.slice(0, -1)
     setLoggedSets(updated)
     setActiveSet(loggedSets.length) // go back one set number
+    onSetUnlogged?.(lastSet.set_number)  // ← delete from Supabase immediately
     if (wasAllDone) onUncomplete?.()
   }
 
