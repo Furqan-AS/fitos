@@ -220,7 +220,7 @@ export default function ExerciseCard({
             onChange={(e) => setApplyWeightStr(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') applyWeightToAll() }}
             style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
               fontSize: 16, fontWeight: 700, color: 'var(--text)', textAlign: 'center',
               fontVariantNumeric: 'tabular-nums',
             }}
