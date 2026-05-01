@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background-color: #09090b;
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  /* Prevent elastic overscroll revealing white background on iOS */
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100svh;
+  position: relative;
+  /* Push all page content below the notch / Dynamic Island */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ── Safe area utilities ── */
+.pt-safe  { padding-top:    env(safe-area-inset-top,    0px); }
+.pb-safe  { padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* Page scroll container bottom — clears fixed BottomNav + home indicator */
+.pb-page  { padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)); }
+
+/* ── Remove iOS blue tap flash on all interactive elements ── */
+button, a, [role="button"], input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button, a, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* ── Prevent iOS auto-zoom on focused inputs (requires font-size ≥ 16px) ── */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+input[type="search"],
+select,
+textarea {
+  font-size: 16px;
+}
+
+/* ── Layered warm mesh background — not basic flat black ── */
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 90% 55% at 20% -5%,  rgba(234,179,8,0.13)  0%, transparent 60%),
+    radial-gradient(ellipse 60% 45% at 90%  8%,  rgba(249,115,22,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 55% at 50% 105%, rgba(79,70,229,0.08)  0%, transparent 55%),
+    radial-gradient(ellipse 40% 35% at 5%  70%,  rgba(168,85,247,0.06) 0%, transparent 50%),
+    #09090b;
+  pointer-events: none;
+}
+
+#root > * { position: relative; z-index: 1; }
+
+/* ── Glass cards ── */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-bright {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-warm {
+  background: rgba(251, 191, 36, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(251, 191, 36, 0.12);
+}
+
+/* ── Brand glow — amber/orange, not neon green ── */
+.glow-brand {
+  box-shadow: 0 0 30px rgba(249,115,22,0.30), 0 0 60px rgba(249,115,22,0.12);
+}
+
+.glow-brand-sm {
+  box-shadow: 0 0 16px rgba(249,115,22,0.35), 0 4px 24px rgba(249,115,22,0.18);
+}
+
+/* ── Keep green only for success/completion states ── */
+.glow-green {
+  box-shadow: 0 0 30px rgba(34,197,94,0.22), 0 0 60px rgba(34,197,94,0.08);
+}
+
+.glow-green-sm {
+  box-shadow: 0 0 14px rgba(34,197,94,0.28), 0 4px 20px rgba(34,197,94,0.14);
+}
+
+/* ── Gradient text — warm amber → orange ── */
+.gradient-text {
+  background: linear-gradient(135deg, #fbbf24 0%, #f97316 55%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Gradient text for success ── */
+.gradient-text-green {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 55%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-white {
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Range input ── */
+input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; }
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, #f97316 var(--val, 60%), rgba(255,255,255,0.1) var(--val, 60%));
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  margin-top: -8px; cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(249,115,22,0.2), 0 2px 8px rgba(0,0,0,0.5);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  border: none; cursor: pointer;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+/* ── Animations ── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(249,115,22,0.3); }
+  50%       { box-shadow: 0 0 45px rgba(249,115,22,0.6); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-float      { animation: float 3s ease-in-out infinite; }
+.animate-slide-up   { animation: slide-up 0.3s ease-out forwards; }
+
+/* ── Number inputs: hide spinner arrows ── */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
