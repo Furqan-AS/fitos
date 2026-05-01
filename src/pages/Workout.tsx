@@ -275,17 +275,18 @@ export default function Workout() {
   }
 
   return (
-    <div className="px-4 pt-6 pb-page max-w-md mx-auto space-y-4">
+    <div className="px-5 pt-12 pb-page max-w-md mx-auto space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between mb-1">
         <div>
-          <p className="text-white/30 text-xs uppercase tracking-widest mb-1">Training</p>
-          <h1 className="text-2xl font-black text-white">Weekly Plan</h1>
+          <p className="text-[11px] font-bold text-white/25 uppercase tracking-widest mb-2">Training</p>
+          <h1 className="text-4xl font-black text-white tracking-tight">Train</h1>
         </div>
         {isViewingToday && programDay && programDay.exercises.length > 0 && (
-          <div className="glass rounded-2xl px-3 py-2 flex items-center gap-2">
+          <div className="rounded-2xl px-3 py-2 flex items-center gap-2"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
             <Clock size={12} className="text-white/40" />
-            <span className="text-sm font-mono text-white tabular-nums">{mm}:{ss}</span>
+            <span className="text-sm font-mono font-bold text-white tabular-nums">{mm}:{ss}</span>
           </div>
         )}
       </div>
