@@ -53,6 +53,9 @@ export default function Nutrition() {
   const [activeId, setActiveId]     = useState('protein')
   const [expanded, setExpanded]     = useState<string | null>(null)
   const category = CATEGORIES.find(c => c.id === activeId)!
+  const macroKey: 'protein' | 'carbs' | 'fat' =
+    activeId === 'carbs' ? 'carbs' : activeId === 'fats' ? 'fat' : 'protein'
+  const macroLabel = activeId === 'carbs' ? 'carbs' : activeId === 'fats' ? 'fat' : 'protein'
 
   return (
     <div style={{ maxWidth: 448, margin: '0 auto' }} className="pb-page">
@@ -144,8 +147,8 @@ export default function Nutrition() {
                     <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>kcal</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 16, fontWeight: 800, color: category.color, fontVariantNumeric: 'tabular-nums' }}>{food.protein}g</p>
-                    <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>protein</p>
+                    <p style={{ fontSize: 16, fontWeight: 800, color: category.color, fontVariantNumeric: 'tabular-nums' }}>{food[macroKey]}g</p>
+                    <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>{macroLabel}</p>
                   </div>
                 </div>
                 <ChevronDown size={15} color="var(--text-3)" style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
