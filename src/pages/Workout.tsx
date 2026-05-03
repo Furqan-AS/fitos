@@ -119,31 +119,46 @@ export default function Workout() {
         }
       }
 
+      // Fetch this user's past session IDs once — used to correctly filter history per exercise
+      const { data: pastSessionData } = await supabase
+        .from('workout_sessions')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(30)
+      const pastSessionIds = (pastSessionData ?? []).map((s: { id: string }) => s.id).filter(id => id !== sid)
+
       const loaded: SessionExercise[] = await Promise.all(
         programDay.exercises.map(async (tmpl) => {
           const exercise = getExerciseById(tmpl.exercise_id)
-          const { data: history } = await supabase
-            .from('exercise_logs')
-            .select('*, workout_sessions!inner(user_id, date)')
-            .eq('exercise_id', tmpl.exercise_id)
-            .order('workout_sessions(date)', { ascending: false })
-            .limit(30)
 
           const groupedHistory: ExerciseLog[][] = []
-          if (history && history.length > 0) {
-            const bySession: Record<string, ExerciseLog[]> = {}
-            for (const log of history as ExerciseLog[]) {
-              const s = log.session_id
-              if (!bySession[s]) bySession[s] = []
-              bySession[s].push(log)
+          if (pastSessionIds.length > 0) {
+            const { data: history } = await supabase
+              .from('exercise_logs')
+              .select('*, workout_sessions!inner(date)')
+              .in('session_id', pastSessionIds)
+              .eq('exercise_id', tmpl.exercise_id)
+              .order('workout_sessions(date)', { ascending: false })
+              .limit(30)
+
+            if (history && history.length > 0) {
+              const bySession: Record<string, ExerciseLog[]> = {}
+              for (const log of history as ExerciseLog[]) {
+                const s = log.session_id
+                if (!bySession[s]) bySession[s] = []
+                bySession[s].push(log)
+              }
+              groupedHistory.push(...Object.values(bySession).slice(0, 5))
             }
-            groupedHistory.push(...Object.values(bySession).slice(0, 3))
           }
 
           const lastSession  = groupedHistory[groupedHistory.length - 1]
           const lastWeight   = lastSession?.[0]?.weight_kg
           const rec          = getWeightRecommendation(groupedHistory, tmpl.sets, tmpl.target_reps_min, tmpl.exercise_type)
-          const suggestedWeight = rec?.recommended_weight_kg ?? (tmpl.exercise_type === 'lower_compound' ? 40 : 20)
+          const defaultWeight = tmpl.exercise_type === 'lower_compound' ? 40
+            : tmpl.exercise_type === 'upper_compound' ? 30 : 12
+          const suggestedWeight = rec?.recommended_weight_kg ?? defaultWeight
           const completedSets   = todaysLogs[tmpl.exercise_id] ?? []
           return { template: tmpl, exercise, suggestedWeight, lastWeight, progressDirection: rec?.direction, completedSets }
         })

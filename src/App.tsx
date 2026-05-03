@@ -10,17 +10,7 @@ import Nutrition from '@/pages/Nutrition'
 import Progress from '@/pages/Progress'
 import Profile from '@/pages/Profile'
 import Setup from '@/pages/Setup'
-
-// Default profile values — used when auto-creating a profile for a new device
-const DEFAULT_PROFILE = {
-  name: 'Athlete',
-  age: 37,
-  gender: 'male',
-  weight_kg: 100,
-  height_cm: 180,
-  goal: 'fat_loss',
-  activity_level: 1.65,
-}
+import Onboarding from '@/pages/Onboarding'
 
 function Spinner() {
   return (
@@ -39,6 +29,7 @@ function Spinner() {
 function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   const [ready, setReady] = useState(false)
+  const needsOnboarding = ready && !!session && !localStorage.getItem('fitos_onboarded')
 
   useEffect(() => {
     if (!isSupabaseConfigured) { setSession(null); setReady(true); return }
@@ -74,26 +65,6 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Auto-create a default profile when the anonymous user is new
-  useEffect(() => {
-    if (!session?.user) return
-    async function ensureProfile() {
-      const userId = session!.user.id
-      const { data } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (!data) {
-        await supabase.from('profiles').insert({
-          user_id: userId,
-          ...DEFAULT_PROFILE,
-        })
-      }
-    }
-    ensureProfile()
-  }, [session])
 
   if (!isSupabaseConfigured) {
     return (
@@ -106,6 +77,16 @@ function App() {
   }
 
   if (!ready) return <Spinner />
+
+  if (needsOnboarding) {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="*" element={<Onboarding />} />
+        </Routes>
+      </BrowserRouter>
+    )
+  }
 
   return (
     <BrowserRouter>

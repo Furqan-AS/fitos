@@ -1,181 +1,185 @@
 import { useState } from 'react'
-import { ChevronRight, Dumbbell, Check } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import { calcBMR, calcTDEE, calcMacroTargets } from '@/lib/nutrition'
 import { supabase } from '@/lib/supabase'
 import type { Gender } from '@/types'
 
-interface FormData {
-  name: string
-  age: string
-  gender: Gender
-  weight_kg: string
-  height_cm: string
-}
-
 export default function Onboarding() {
-  const [form, setForm] = useState<FormData>({ name: '', age: '37', gender: 'male', weight_kg: '100', height_cm: '180' })
-  const [step, setStep] = useState<1 | 2>(1)
-  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+  const [name,   setName]   = useState('')
+  const [age,    setAge]    = useState('')
+  const [weight, setWeight] = useState('')
+  const [height, setHeight] = useState('')
+  const [gender, setGender] = useState<Gender>('male')
+  const [saving, setSaving] = useState(false)
+  const [error,  setError]  = useState('')
 
-  function set(field: keyof FormData, value: string) {
-    setForm(f => ({ ...f, [field]: value }))
+  async function handleStart() {
+    if (!name.trim()) { setError('Enter your name to continue.'); return }
+    setSaving(true)
+    setError('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setError('Auth error — try refreshing.'); setSaving(false); return }
+
+      const ageN    = Number(age)    || 30
+      const weightN = Number(weight) || 80
+      const heightN = Number(height) || 175
+
+      await supabase.from('profiles').upsert({
+        user_id:        user.id,
+        name:           name.trim(),
+        age:            ageN,
+        weight_kg:      weightN,
+        height_cm:      heightN,
+        gender,
+        goal:           'fat_loss',
+        activity_level: 1.65,
+        updated_at:     new Date().toISOString(),
+      })
+
+      const bmr    = calcBMR(weightN, heightN, ageN, gender)
+      const tdee   = calcTDEE(bmr, 1.65)
+      const macros = calcMacroTargets(weightN, tdee)
+      await supabase.from('nutrition_targets').upsert({ user_id: user.id, ...macros })
+
+      localStorage.setItem('fitos_onboarded', '1')
+      navigate('/', { replace: true })
+    } catch {
+      setError('Something went wrong. Try again.')
+      setSaving(false)
+    }
   }
-
-  async function handleFinish() {
-    setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoading(false); return }
-
-    const age = Number(form.age), weight = Number(form.weight_kg), height = Number(form.height_cm)
-    const bmr = calcBMR(weight, height, age, form.gender)
-    const tdee = calcTDEE(bmr, 1.65)
-    const macros = calcMacroTargets(weight, tdee)
-
-    await supabase.from('profiles').upsert({ user_id: user.id, name: form.name, age, gender: form.gender, weight_kg: weight, height_cm: height, goal: 'fat_loss', activity_level: 1.65 })
-    await supabase.from('nutrition_targets').upsert({ user_id: user.id, calories: macros.calories, protein_g: macros.protein_g, carbs_g: macros.carbs_g, fat_g: macros.fat_g })
-
-    setLoading(false)
-    window.location.href = '/'
-  }
-
-  const age = Number(form.age), weight = Number(form.weight_kg), height = Number(form.height_cm)
-  const bmr = calcBMR(weight, height, age, form.gender)
-  const tdee = calcTDEE(bmr, 1.65)
-  const macros = calcMacroTargets(weight, tdee)
 
   return (
-    <div className="min-h-screen flex flex-col px-5 py-10 max-w-md mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-10">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-          <Dumbbell size={18} className="text-white" strokeWidth={2.5} />
+    <div style={{
+      minHeight: '100svh', display: 'flex', flexDirection: 'column', justifyContent: 'center',
+      padding: '48px 28px', maxWidth: 400, margin: '0 auto',
+    }}>
+
+      {/* Logo */}
+      <div style={{ marginBottom: 44 }}>
+        <div style={{
+          width: 52, height: 52, borderRadius: 16,
+          background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28,
+        }}>
+          <span style={{ fontSize: 22, fontWeight: 900, color: '#000' }}>F</span>
         </div>
-        <span className="text-lg font-black gradient-text">FitOS</span>
+        <h1 style={{ fontSize: 34, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', lineHeight: 1.1, marginBottom: 10 }}>
+          Create your<br />profile.
+        </h1>
+        <p style={{ fontSize: 15, color: 'var(--text-2)', lineHeight: 1.6 }}>
+          Each person who opens this app gets their own profile and training history.
+        </p>
       </div>
 
-      {/* Step indicators */}
-      <div className="flex items-center gap-2 mb-8">
-        {[1, 2].map(s => (
-          <div key={s} className="h-1 flex-1 rounded-full transition-all duration-500"
-            style={{ background: s <= step ? 'linear-gradient(90deg, #f59e0b, #f97316)' : 'rgba(255,255,255,0.08)' }} />
-        ))}
+      {/* Form fields */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 28 }}>
+
+        {/* Name */}
+        <div>
+          <p className="label" style={{ marginBottom: 8 }}>Your name</p>
+          <input
+            type="text"
+            placeholder="e.g. Furqan"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleStart()}
+            autoFocus
+            style={{
+              width: '100%', padding: '15px 18px',
+              background: 'var(--surface-hi)', border: '1px solid var(--border-hi)',
+              borderRadius: 14, color: 'var(--text)', fontSize: 16, fontWeight: 500, outline: 'none',
+            }}
+          />
+        </div>
+
+        {/* Age + Weight */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {([
+            { label: 'Age',    value: age,    setter: setAge,    unit: 'yrs', placeholder: '30' },
+            { label: 'Weight', value: weight, setter: setWeight, unit: 'kg',  placeholder: '80' },
+          ] as const).map(({ label, value, setter, unit, placeholder }) => (
+            <div key={label}>
+              <p className="label" style={{ marginBottom: 8 }}>{label}</p>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="number" inputMode="decimal"
+                  placeholder={placeholder}
+                  value={value}
+                  onChange={e => setter(e.target.value)}
+                  style={{
+                    width: '100%', padding: '15px 42px 15px 18px', minWidth: 0,
+                    background: 'var(--surface-hi)', border: '1px solid var(--border-hi)',
+                    borderRadius: 14, color: 'var(--text)', fontSize: 16, fontWeight: 500, outline: 'none',
+                  }}
+                />
+                <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-3)', pointerEvents: 'none' }}>{unit}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Height + Gender */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <p className="label" style={{ marginBottom: 8 }}>Height</p>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="number" inputMode="numeric"
+                placeholder="175"
+                value={height}
+                onChange={e => setHeight(e.target.value)}
+                style={{
+                  width: '100%', padding: '15px 42px 15px 18px', minWidth: 0,
+                  background: 'var(--surface-hi)', border: '1px solid var(--border-hi)',
+                  borderRadius: 14, color: 'var(--text)', fontSize: 16, fontWeight: 500, outline: 'none',
+                }}
+              />
+              <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-3)', pointerEvents: 'none' }}>cm</span>
+            </div>
+          </div>
+          <div>
+            <p className="label" style={{ marginBottom: 8 }}>Gender</p>
+            <div style={{ display: 'flex', gap: 8, height: 52 }}>
+              {(['male', 'female'] as Gender[]).map(g => (
+                <button key={g} onClick={() => setGender(g)}
+                  style={{
+                    flex: 1, borderRadius: 14, fontSize: 13, fontWeight: 700,
+                    textTransform: 'capitalize', cursor: 'pointer', transition: 'all 0.15s',
+                    background: gender === g ? 'var(--accent)' : 'var(--surface-hi)',
+                    color: gender === g ? '#000' : 'var(--text-2)',
+                    border: gender === g ? 'none' : '1px solid var(--border-hi)',
+                  }}
+                >{g}</button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {step === 1 && (
-        <div className="flex flex-col gap-5 flex-1">
-          <div>
-            <h1 className="text-2xl font-black text-white">Your profile</h1>
-            <p className="text-white/40 text-sm mt-1">Pre-filled based on what you told me.</p>
-          </div>
-
-          {/* Name */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Name</label>
-            <input
-              placeholder="e.g. Furqan"
-              value={form.name}
-              onChange={e => set('name', e.target.value)}
-              className="w-full glass-bright rounded-2xl px-4 py-3.5 text-white placeholder-white/20 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-            />
-          </div>
-
-          {/* Age + Gender */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Age</label>
-              <div className="relative">
-                <input type="number" value={form.age} onChange={e => set('age', e.target.value)}
-                  className="w-full glass-bright rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 pr-12" />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 text-xs">yrs</span>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-white/40 uppercase tracking-wider">Gender</label>
-              <div className="flex gap-2">
-                {(['male', 'female'] as Gender[]).map(g => (
-                  <button key={g} onClick={() => set('gender', g)}
-                    className="flex-1 py-3.5 rounded-2xl text-sm font-semibold capitalize transition-all active:scale-95"
-                    style={form.gender === g
-                      ? { background: 'linear-gradient(135deg, #f59e0b, #f97316)', color: 'white', boxShadow: '0 0 12px rgba(249,115,22,0.3)' }
-                      : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    {g}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Weight + Height */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Weight', field: 'weight_kg' as const, unit: 'kg' },
-              { label: 'Height', field: 'height_cm' as const, unit: 'cm' },
-            ].map(({ label, field, unit }) => (
-              <div key={field} className="space-y-1.5">
-                <label className="text-xs font-medium text-white/40 uppercase tracking-wider">{label}</label>
-                <div className="relative">
-                  <input type="number" value={form[field]} onChange={e => set(field, e.target.value)}
-                    className="w-full glass-bright rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 pr-12" />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 text-xs">{unit}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <button onClick={() => setStep(2)}
-            className="mt-auto w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 glow-brand-sm transition-all active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-            Continue <ChevronRight size={18} strokeWidth={2.5} />
-          </button>
-        </div>
+      {error && (
+        <p style={{ fontSize: 13, color: 'var(--red)', marginBottom: 14 }}>{error}</p>
       )}
 
-      {step === 2 && (
-        <div className="flex flex-col gap-5 flex-1">
-          <div>
-            <h1 className="text-2xl font-black text-white">Your daily targets</h1>
-            <p className="text-white/40 text-sm mt-1">Calculated for fat loss + muscle preservation.</p>
-          </div>
+      <button
+        onClick={handleStart}
+        disabled={saving}
+        className="btn-primary"
+        style={{
+          width: '100%', height: 56, fontSize: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          opacity: saving ? 0.6 : 1,
+        }}
+      >
+        {saving ? 'Saving…' : 'Start my program'}
+        {!saving && <ArrowRight size={18} strokeWidth={2.5} />}
+      </button>
 
-          <div className="space-y-3">
-            {[
-              { label: 'Daily calories', value: `${macros.calories.toLocaleString()} kcal`, sub: `TDEE ${tdee.toLocaleString()} − 810 kcal deficit`, highlight: true },
-              { label: 'Protein', value: `${macros.protein_g}g`, sub: '1.8g × bodyweight — muscle preservation' },
-              { label: 'Carbohydrates', value: `${macros.carbs_g}g`, sub: 'Performance & training fuel' },
-              { label: 'Fat', value: `${macros.fat_g}g`, sub: '~25% of calories' },
-            ].map(({ label, value, sub, highlight }) => (
-              <div key={label} className={`p-4 rounded-2xl flex items-center justify-between ${highlight ? 'glass-bright' : 'glass'}`}>
-                <div>
-                  <p className="text-sm font-semibold text-white">{label}</p>
-                  <p className="text-xs text-white/30 mt-0.5">{sub}</p>
-                </div>
-                <span className={`text-base font-black ${highlight ? 'gradient-text' : 'text-white'}`}>{value}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="glass rounded-2xl p-4"
-            style={{ borderColor: 'rgba(249,115,22,0.2)', background: 'rgba(249,115,22,0.05)' }}>
-            <p className="text-xs text-amber-300/80 leading-relaxed">
-              <span className="font-bold text-amber-300">Goal: 85 kg · Aesthetic physique</span> — ~24 weeks at 0.6 kg/week.
-              Mon/Wed/Fri/Sat lifting · Sun VO₂ max · Daily walks.
-            </p>
-          </div>
-
-          <div className="flex gap-3 mt-auto">
-            <button onClick={() => setStep(1)}
-              className="flex-1 py-4 rounded-2xl font-semibold text-white/60 glass transition-all active:scale-95 text-sm">
-              Back
-            </button>
-            <button onClick={handleFinish} disabled={loading}
-              className="flex-2 flex-1 py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 glow-brand-sm transition-all active:scale-95 disabled:opacity-40"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}>
-              {loading ? 'Saving…' : <><Check size={16} strokeWidth={3} /> Let's go</>}
-            </button>
-          </div>
-        </div>
-      )}
+      <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 20, textAlign: 'center', lineHeight: 1.6 }}>
+        You can update everything later in your profile.
+      </p>
     </div>
   )
 }
