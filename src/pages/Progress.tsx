@@ -28,6 +28,8 @@ export default function Progress() {
   const [showWeightLog, setShowWeightLog] = useState(false)
   const [newWeight, setNewWeight]         = useState('')
   const [loading, setLoading]             = useState(true)
+  const [goalWeight, setGoalWeight]       = useState(85)
+  const [profileWeight, setProfileWeight] = useState(100)
 
   useEffect(() => { load() }, [])
 
@@ -35,6 +37,10 @@ export default function Progress() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
+
+    const { data: prof } = await supabase.from('profiles').select('weight_kg,goal_weight_kg').eq('user_id', user.id).maybeSingle()
+    if (prof?.goal_weight_kg) setGoalWeight(prof.goal_weight_kg)
+    if (prof?.weight_kg)      setProfileWeight(prof.weight_kg)
 
     const { data: wt } = await supabase.from('body_metrics').select('*').eq('user_id', user.id).order('date', { ascending: true }).limit(60)
     const { data: userSessions } = await supabase.from('workout_sessions').select('id, date, completed').eq('user_id', user.id).eq('completed', true).order('date', { ascending: false }).limit(30)
@@ -84,11 +90,12 @@ export default function Progress() {
     setShowWeightLog(false); setNewWeight(''); load()
   }
 
-  const latestWeight = weights.at(-1)?.weight_kg
-  const startWeight  = weights[0]?.weight_kg
-  const totalLost    = startWeight && latestWeight && latestWeight < startWeight ? +(startWeight - latestWeight).toFixed(1) : null
-  const toGoal       = latestWeight ? +(latestWeight - 85).toFixed(1) : null
-  const pctDone      = latestWeight ? Math.min(((100 - latestWeight) / 15) * 100, 100) : 0
+  const latestWeight   = weights.at(-1)?.weight_kg
+  const startWeight    = weights[0]?.weight_kg ?? profileWeight
+  const totalLost      = startWeight && latestWeight && latestWeight < startWeight ? +(startWeight - latestWeight).toFixed(1) : null
+  const toGoal         = latestWeight ? Math.max(0, +(latestWeight - goalWeight).toFixed(1)) : null
+  const totalJourney   = Math.max(startWeight - goalWeight, 1)
+  const pctDone        = latestWeight ? Math.min(Math.max(((startWeight - latestWeight) / totalJourney) * 100, 0), 100) : 0
 
   function fmtDate(d: string) {
     return new Date(d + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -104,7 +111,7 @@ export default function Progress() {
       <div style={{ marginBottom: 36 }}>
         <p className="label" style={{ marginBottom: 8 }}>Transformation</p>
         <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 6 }}>Progress</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-2)' }}>100 kg → 85 kg · 24 weeks</p>
+        <p style={{ fontSize: 14, color: 'var(--text-2)' }}>{startWeight} kg → {goalWeight} kg</p>
       </div>
 
       {/* Weight stats */}
@@ -138,9 +145,9 @@ export default function Progress() {
             <div style={{ height: '100%', width: `${pctDone}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.6s ease' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Start 100 kg</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Start {startWeight} kg</span>
             <span style={{ fontSize: 11, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Target size={9} color="var(--accent)" /> Goal 85 kg
+              <Target size={9} color="var(--accent)" /> Goal {goalWeight} kg
             </span>
           </div>
         </div>

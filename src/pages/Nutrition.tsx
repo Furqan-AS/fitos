@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface Food { name: string; serving: string; grams: number; cal: number; protein: number; carbs: number; fat: number; note: string }
 interface Category { id: string; label: string; color: string; foods: Food[] }
@@ -52,6 +53,18 @@ const CATEGORIES: Category[] = [
 export default function Nutrition() {
   const [activeId, setActiveId]     = useState('protein')
   const [expanded, setExpanded]     = useState<string | null>(null)
+  const [targets, setTargets] = useState({ calories: 2400, protein_g: 180, carbs_g: 195, fat_g: 65 })
+
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('nutrition_targets').select('calories,protein_g,carbs_g,fat_g').eq('user_id', user.id).maybeSingle()
+      if (data) setTargets(data)
+    }
+    load()
+  }, [])
+
   const category = CATEGORIES.find(c => c.id === activeId)!
   const macroKey: 'protein' | 'carbs' | 'fat' =
     activeId === 'carbs' ? 'carbs' : activeId === 'fats' ? 'fat' : 'protein'
@@ -67,10 +80,10 @@ export default function Nutrition() {
         {/* Daily targets grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           {[
-            { label: 'Calories', value: '2,400', unit: 'kcal', color: 'var(--accent)' },
-            { label: 'Protein',  value: '180',   unit: 'g',    color: 'var(--green)' },
-            { label: 'Carbs',    value: '195',   unit: 'g',    color: '#5B8AF0' },
-            { label: 'Fat',      value: '65',    unit: 'g',    color: '#C97BFF' },
+            { label: 'Calories', value: targets.calories.toLocaleString(), unit: 'kcal', color: 'var(--accent)' },
+            { label: 'Protein',  value: String(targets.protein_g),       unit: 'g',    color: 'var(--green)' },
+            { label: 'Carbs',    value: String(targets.carbs_g),         unit: 'g',    color: '#5B8AF0' },
+            { label: 'Fat',      value: String(targets.fat_g),           unit: 'g',    color: '#C97BFF' },
           ].map(({ label, value, unit, color }) => (
             <div key={label} className="card" style={{ padding: '12px 10px', textAlign: 'center' }}>
               <p style={{ fontSize: 20, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1 }}>{value}</p>
@@ -170,9 +183,9 @@ export default function Nutrition() {
                   </div>
                   {/* % of daily budget bars */}
                   {[
-                    { l: 'Calories', used: food.cal,     of: 2400, c: 'rgba(255,255,255,0.4)' },
-                    { l: 'Protein',  used: food.protein, of: 180,  c: 'var(--green)' },
-                    { l: 'Carbs',    used: food.carbs,   of: 195,  c: '#5B8AF0' },
+                    { l: 'Calories', used: food.cal,     of: targets.calories,   c: 'rgba(255,255,255,0.4)' },
+                    { l: 'Protein',  used: food.protein, of: targets.protein_g,  c: 'var(--green)' },
+                    { l: 'Carbs',    used: food.carbs,   of: targets.carbs_g,    c: '#5B8AF0' },
                   ].filter(x => x.used > 0).map(({ l, used, of, c }) => (
                     <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                       <span style={{ fontSize: 11, color: 'var(--text-3)', width: 52 }}>{l}</span>

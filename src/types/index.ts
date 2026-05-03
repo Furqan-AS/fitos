@@ -15,6 +15,7 @@ export interface Profile {
   height_cm: number
   goal: Goal
   activity_level: number
+  goal_weight_kg: number
   created_at: string
   updated_at: string
 }

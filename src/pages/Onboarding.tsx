@@ -1,19 +1,18 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { calcBMR, calcTDEE, calcMacroTargets } from '@/lib/nutrition'
 import { supabase } from '@/lib/supabase'
 import type { Gender } from '@/types'
 
 export default function Onboarding() {
-  const navigate = useNavigate()
-  const [name,   setName]   = useState('')
-  const [age,    setAge]    = useState('')
-  const [weight, setWeight] = useState('')
-  const [height, setHeight] = useState('')
-  const [gender, setGender] = useState<Gender>('male')
-  const [saving, setSaving] = useState(false)
-  const [error,  setError]  = useState('')
+  const [name,        setName]       = useState('')
+  const [age,         setAge]        = useState('')
+  const [weight,      setWeight]     = useState('')
+  const [goalWeight,  setGoalWeight] = useState('')
+  const [height,      setHeight]     = useState('')
+  const [gender,      setGender]     = useState<Gender>('male')
+  const [saving,      setSaving]     = useState(false)
+  const [error,       setError]      = useState('')
 
   async function handleStart() {
     if (!name.trim()) { setError('Enter your name to continue.'); return }
@@ -23,20 +22,22 @@ export default function Onboarding() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setError('Auth error — try refreshing.'); setSaving(false); return }
 
-      const ageN    = Number(age)    || 30
-      const weightN = Number(weight) || 80
-      const heightN = Number(height) || 175
+      const ageN        = Number(age)        || 30
+      const weightN     = Number(weight)     || 80
+      const goalWeightN = Number(goalWeight) || Math.round(weightN * 0.85)
+      const heightN     = Number(height)     || 175
 
       await supabase.from('profiles').upsert({
-        user_id:        user.id,
-        name:           name.trim(),
-        age:            ageN,
-        weight_kg:      weightN,
-        height_cm:      heightN,
+        user_id:         user.id,
+        name:            name.trim(),
+        age:             ageN,
+        weight_kg:       weightN,
+        goal_weight_kg:  goalWeightN,
+        height_cm:       heightN,
         gender,
-        goal:           'fat_loss',
-        activity_level: 1.65,
-        updated_at:     new Date().toISOString(),
+        goal:            'fat_loss',
+        activity_level:  1.65,
+        updated_at:      new Date().toISOString(),
       })
 
       const bmr    = calcBMR(weightN, heightN, ageN, gender)
@@ -45,7 +46,7 @@ export default function Onboarding() {
       await supabase.from('nutrition_targets').upsert({ user_id: user.id, ...macros })
 
       localStorage.setItem('fitos_onboarded', '1')
-      navigate('/', { replace: true })
+      window.location.href = '/'
     } catch {
       setError('Something went wrong. Try again.')
       setSaving(false)
@@ -95,11 +96,11 @@ export default function Onboarding() {
           />
         </div>
 
-        {/* Age + Weight */}
+        {/* Age + Current Weight */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {([
-            { label: 'Age',    value: age,    setter: setAge,    unit: 'yrs', placeholder: '30' },
-            { label: 'Weight', value: weight, setter: setWeight, unit: 'kg',  placeholder: '80' },
+            { label: 'Age',            value: age,    setter: setAge,    unit: 'yrs', placeholder: '30' },
+            { label: 'Current weight', value: weight, setter: setWeight, unit: 'kg',  placeholder: '80' },
           ] as const).map(({ label, value, setter, unit, placeholder }) => (
             <div key={label}>
               <p className="label" style={{ marginBottom: 8 }}>{label}</p>
@@ -119,6 +120,25 @@ export default function Onboarding() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Goal Weight */}
+        <div>
+          <p className="label" style={{ marginBottom: 8 }}>Goal weight</p>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="number" inputMode="decimal"
+              placeholder="e.g. 75"
+              value={goalWeight}
+              onChange={e => setGoalWeight(e.target.value)}
+              style={{
+                width: '100%', padding: '15px 42px 15px 18px', minWidth: 0,
+                background: 'var(--surface-hi)', border: '1px solid var(--border-hi)',
+                borderRadius: 14, color: 'var(--text)', fontSize: 16, fontWeight: 500, outline: 'none',
+              }}
+            />
+            <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-3)', pointerEvents: 'none' }}>kg</span>
+          </div>
         </div>
 
         {/* Height + Gender */}

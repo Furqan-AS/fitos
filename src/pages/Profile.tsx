@@ -68,8 +68,8 @@ export default function Profile() {
       {/* Header */}
       <div style={{ marginBottom: 40 }}>
         <p className="label" style={{ marginBottom: 8 }}>Account</p>
-        <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 4 }}>{profile.name ?? 'Furqan'}</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-2)' }}>Melbourne · Fat loss phase · Upper/Lower split</p>
+        <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: 4 }}>{profile.name ?? 'Athlete'}</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-2)' }}>Fat loss phase · Upper/Lower split</p>
       </div>
 
       {/* Stats editor */}
@@ -81,6 +81,7 @@ export default function Profile() {
             <InputField label="Age"    value={String(profile.age    ?? '')} unit="yrs" type="number" onChange={v => set('age', v)} />
             <InputField label="Weight" value={String(profile.weight_kg ?? '')} unit="kg" type="number" onChange={v => set('weight_kg', v)} />
           </div>
+          <InputField label="Goal weight" value={String(profile.goal_weight_kg ?? '')} unit="kg" type="number" onChange={v => set('goal_weight_kg', v)} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <InputField label="Height" value={String(profile.height_cm ?? '')} unit="cm" type="number" onChange={v => set('height_cm', v)} />
             <div>
@@ -135,7 +136,7 @@ export default function Profile() {
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>Goal 85 kg · Long femur form cues active · Smoker-adjusted cardio</p>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>Goal {profile.goal_weight_kg ?? 85} kg · Long femur form cues active</p>
       </div>
 
       {/* Supplement protocol */}

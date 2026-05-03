@@ -9,6 +9,8 @@ import type { BodyMetric } from '@/types'
 export default function Dashboard() {
   const [name, setName]               = useState<string | null>(null)
   const [latestWeight, setLatestWeight] = useState<number | null>(null)
+  const [startWeight, setStartWeight]   = useState<number>(100)
+  const [goalWeight, setGoalWeight]     = useState<number>(85)
   const [sessionDone, setSessionDone]   = useState(false)
 
   const programDay = getTodaysProgramDay()
@@ -19,11 +21,13 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const [{ data: prof }, { data: metrics }, { data: session }] = await Promise.all([
-        supabase.from('profiles').select('name').eq('user_id', user.id).single(),
+        supabase.from('profiles').select('name,weight_kg,goal_weight_kg').eq('user_id', user.id).single(),
         supabase.from('body_metrics').select('weight_kg').eq('user_id', user.id).order('date', { ascending: false }).limit(1),
         supabase.from('workout_sessions').select('completed').eq('user_id', user.id).eq('date', today()).maybeSingle(),
       ])
       if (prof?.name) setName(prof.name)
+      if (prof?.weight_kg)      setStartWeight(prof.weight_kg)
+      if (prof?.goal_weight_kg) setGoalWeight(prof.goal_weight_kg)
       if (metrics?.[0]) setLatestWeight((metrics[0] as BodyMetric).weight_kg)
       if (session?.completed) setSessionDone(true)
     }
@@ -33,8 +37,9 @@ export default function Dashboard() {
   const now      = new Date(new Date().toLocaleString('en-AU', { timeZone: 'Australia/Melbourne' }))
   const hour     = now.getHours()
   const greeting = hour < 5 ? "You're up late" : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const toGoal   = latestWeight ? Math.max(0, latestWeight - 85) : null
-  const pctDone  = latestWeight ? Math.min(((100 - latestWeight) / 15) * 100, 100) : 0
+  const toGoal   = latestWeight ? Math.max(0, +(latestWeight - goalWeight).toFixed(1)) : null
+  const totalJourney = Math.max(startWeight - goalWeight, 1)
+  const pctDone  = latestWeight ? Math.min(Math.max(((startWeight - latestWeight) / totalJourney) * 100, 0), 100) : 0
 
   return (
     <div className="px-5 pb-page max-w-md mx-auto" style={{ paddingTop: '52px' }}>
@@ -128,8 +133,8 @@ export default function Dashboard() {
             <div style={{ height: '100%', width: `${pctDone}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width 0.6s ease' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>100 kg</span>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Goal · 85 kg</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{startWeight} kg</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Goal · {goalWeight} kg</span>
           </div>
         </div>
       ) : (

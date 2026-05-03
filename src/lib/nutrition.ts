@@ -12,7 +12,8 @@ export function calcTDEE(bmr: number, activityFactor = 1.55): number {
 }
 
 export function calcMacroTargets(weight_kg: number, tdee: number): MacroTotals {
-  const calories = tdee + 175
+  // ~800 kcal deficit for fat loss (~0.7 kg/week), minimum 1,500 kcal floor
+  const calories = Math.max(Math.round(tdee - 800), 1500)
   const protein_g = Math.round(weight_kg * 1.8)
   const fat_g = Math.round((calories * 0.27) / 9)
   const carbs_g = Math.round((calories - protein_g * 4 - fat_g * 9) / 4)
