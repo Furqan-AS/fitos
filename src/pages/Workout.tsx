@@ -134,31 +134,40 @@ export default function Workout() {
 
           const groupedHistory: ExerciseLog[][] = []
           if (pastSessionIds.length > 0) {
+            // Fetch without relying on joined-table ordering (unreliable in PostgREST).
+            // We know pastSessionIds is newest-first; we'll sort manually below.
             const { data: history } = await supabase
               .from('exercise_logs')
-              .select('*, workout_sessions!inner(date)')
-              .in('session_id', pastSessionIds)
+              .select('session_id, set_number, weight_kg, reps_completed, rpe, skipped')
+              .in('session_id', pastSessionIds.slice(0, 15))
               .eq('exercise_id', tmpl.exercise_id)
-              .order('workout_sessions(date)', { ascending: false })
-              .limit(30)
+              .order('set_number', { ascending: true })
 
             if (history && history.length > 0) {
+              // Group logs by session
               const bySession: Record<string, ExerciseLog[]> = {}
               for (const log of history as ExerciseLog[]) {
-                const s = log.session_id
-                if (!bySession[s]) bySession[s] = []
-                bySession[s].push(log)
+                if (!bySession[log.session_id]) bySession[log.session_id] = []
+                bySession[log.session_id].push(log)
               }
-              groupedHistory.push(...Object.values(bySession).slice(0, 5))
+              // pastSessionIds is newest-first. Build groupedHistory oldest→newest
+              // so history[history.length - 1] = most recent (required by progression.ts).
+              for (let i = pastSessionIds.length - 1; i >= 0; i--) {
+                const logs = bySession[pastSessionIds[i]]
+                if (logs) groupedHistory.push(logs)
+              }
+              // Keep last 5 sessions for progression analysis
+              if (groupedHistory.length > 5) groupedHistory.splice(0, groupedHistory.length - 5)
             }
           }
 
-          const lastSession  = groupedHistory[groupedHistory.length - 1]
-          const lastWeight   = lastSession?.[0]?.weight_kg
-          const rec          = getWeightRecommendation(groupedHistory, tmpl.sets, tmpl.target_reps_min, tmpl.exercise_type)
+          const lastSession   = groupedHistory[groupedHistory.length - 1]   // most recent
+          const lastWeight    = lastSession?.[0]?.weight_kg
+          const rec           = getWeightRecommendation(groupedHistory, tmpl.sets, tmpl.target_reps_min, tmpl.exercise_type)
           const defaultWeight = tmpl.exercise_type === 'lower_compound' ? 40
             : tmpl.exercise_type === 'upper_compound' ? 30 : 12
-          const suggestedWeight = rec?.recommended_weight_kg ?? defaultWeight
+          // Fallback chain: progression rec → last used weight → hardcoded default
+          const suggestedWeight = rec?.recommended_weight_kg ?? lastWeight ?? defaultWeight
           const completedSets   = todaysLogs[tmpl.exercise_id] ?? []
           return { template: tmpl, exercise, suggestedWeight, lastWeight, progressDirection: rec?.direction, completedSets }
         })
